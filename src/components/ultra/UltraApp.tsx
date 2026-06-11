@@ -39,11 +39,11 @@ import { aiLocationIntel } from '../../lib/ultra-ai/locationIntel';
 import { masterSceneAnalyzer } from '../../lib/ultra-ai/masterSceneAnalyzer';
 
 function UltraAppInner() {
-  const { videoRef, loading, error, startCamera, takePhoto, toggleCamera } = useCameraContext();
+  const { videoRef, loading, error, startCamera, takePhoto } = useCameraContext();
   const { lighting, startAnalysis } = useLighting();
   const { detectCameraAngle } = useGyroscope();
-  const { setCurrentLighting, isFlashOn, setFlashOn, facingFront } = useCameraStore();
-  const { recommendedPoses, currentPoseIndex, setRecommendedPoses, selectedGender } = usePoseStore();
+  const { setCurrentLighting, isFlashOn, setFlashOn } = useCameraStore();
+  const { recommendedPoses, currentPoseIndex, setRecommendedPoses, selectedGender, setGender } = usePoseStore();
   const { currentLUT } = useLUTStore();
   const { showPoseMode, setShowPoseMode, showDroneMode, setShowDroneMode, showLUTPicker, setShowLUTPicker, settings } = useAppStore();
   const {
@@ -55,33 +55,22 @@ function UltraAppInner() {
   const [showGenderSelect, setShowGenderSelect] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'success' | 'error' } | null>(null);
   const [showPUNK, setShowPUNK] = useState(false);
-  const [permissionsDone, setPermissionsDone] = useState(false);
-  const [cameraStarted, setCameraStarted] = useState(false);
+  const [appReady, setAppReady] = useState(false);
   const [modeOpen, setModeOpen] = useState<'photographer'|'cinematographer'|'outfit'|'location'|'director'|'hollywood'|'master'|'reel'|'cinegpt'|'trends'|'ar'|'clone'|null>(null);
 
   const currentPose = recommendedPoses[currentPoseIndex] || recommendedPoses[0];
 
-  // Start camera when permissions are granted
-  useEffect(() => {
-    if (permissionsDone && !cameraStarted) {
-      setCameraStarted(true);
-      // Small delay to ensure DOM is ready
-      const t = setTimeout(() => startCamera(), 100);
-      return () => clearTimeout(t);
-    }
-  }, [permissionsDone, cameraStarted, startCamera]);
-
   // Start lighting analysis when camera is ready
   useEffect(() => {
-    if (permissionsDone && videoRef.current && !loading) {
-      const t = setTimeout(() => startAnalysis(videoRef.current!), 500);
+    if (appReady && videoRef.current && !loading && !error) {
+      const t = setTimeout(() => startAnalysis(videoRef.current!), 800);
       return () => clearTimeout(t);
     }
-  }, [permissionsDone, videoRef, loading, startAnalysis]);
+  }, [appReady, videoRef, loading, error, startAnalysis]);
 
   // Run AI engines when lighting data arrives
   useEffect(() => {
-    if (!lighting || !permissionsDone) return;
+    if (!lighting || !appReady) return;
     const angle = detectCameraAngle();
     const isBacklitVal = lighting.condition === 'backlit';
     const isGoldenVal = lighting.condition === 'golden_hour';
@@ -93,7 +82,18 @@ function UltraAppInner() {
     setPhotographerAnalysis(aiPhotographer.analyzeScene(lighting.averageLuminance, lighting.colorTemperature, true, true));
     setMasterResult(masterSceneAnalyzer.analyze(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, isBacklitVal, tilt));
     setRecommendedPoses(lighting.condition === 'golden_hour' ? 'nature' : 'urban', angle, selectedGender);
-  }, [lighting, selectedGender, permissionsDone, detectCameraAngle, setSceneParams, setMoodResult, setLocationAnalysis, setPhotographerAnalysis, setMasterResult, setRecommendedPoses]);
+  }, [lighting, selectedGender, appReady, detectCameraAngle, setSceneParams, setMoodResult, setLocationAnalysis, setPhotographerAnalysis, setMasterResult, setRecommendedPoses]);
+
+  const handleStartCamera = useCallback(async (): Promise<boolean> => {
+    return await startCamera();
+  }, [startCamera]);
+
+  const handlePermissionsComplete = useCallback((gender: 'male' | 'female' | 'neutral') => {
+    setGender(gender);
+    useAppStore.getState().updateSettings({ gender });
+    useAppStore.getState().setOnboarding({ genderSelected: true, permissionsGranted: true, completed: true });
+    setAppReady(true);
+  }, [setGender]);
 
   const handleCapture = useCallback(() => {
     const photo = takePhoto();
@@ -107,20 +107,19 @@ function UltraAppInner() {
     setShowPoseMode(!showPoseMode);
   }, [showPoseMode, setShowPoseMode]);
 
-  const handleGenderSelect = useCallback((gender: any) => {
-    useAppStore.getState().updateSettings({ gender });
-    setShowGenderSelect(false);
-    useAppStore.getState().setOnboarding({ genderSelected: true });
-  }, []);
-
-  const handleToggleCamera = useCallback(() => {
+  const handleToggleCamera = useCallback(async () => {
     useCameraStore.getState().toggleCamera();
-    // Restart camera with new facing mode
-    setTimeout(() => startCamera(), 200);
+    setTimeout(async () => {
+      await startCamera();
+    }, 200);
   }, [startCamera]);
 
-  if (!permissionsDone) {
-    return <PermissionsGate onComplete={() => setPermissionsDone(true)} />;
+  if (!appReady) {
+    return (
+      <CameraFeed>
+        <PermissionsGate onStartCamera={handleStartCamera} onComplete={handlePermissionsComplete} />
+      </CameraFeed>
+    );
   }
 
   const MODE_BUTTONS = [
@@ -154,7 +153,7 @@ function UltraAppInner() {
       )}
 
       {/* Pose Mode Overlay */}
-      {showPoseMode && currentPose && (
+      {showPoseMode && currentPose && !loading && (
         <div className="absolute inset-0 z-10 pointer-events-none">
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute bottom-32 left-1/2 -translate-x-1/2 w-48 h-72 pointer-events-auto">
@@ -200,24 +199,24 @@ function UltraAppInner() {
           <div className="absolute top-0 left-0 right-0 z-10">
             <div className="flex items-center justify-between px-4 pt-12 pb-4 bg-gradient-to-b from-black/60 to-transparent">
               <div className="flex items-center gap-2">
-                <button onClick={() => setFlashOn(!isFlashOn)} className={`p-2 rounded-full backdrop-blur-md transition-colors ${isFlashOn ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'}`}>
+                <button onClick={() => setFlashOn(!isFlashOn)} className={`p-2 rounded-full backdrop-blur-md transition-colors ${isFlashOn ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'}`} aria-label="Toggle flash">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                   </svg>
                 </button>
-                <button onClick={handleTogglePose} className={`p-2 rounded-full backdrop-blur-md transition-colors ${showPoseMode ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'}`}>
+                <button onClick={handleTogglePose} className={`p-2 rounded-full backdrop-blur-md transition-colors ${showPoseMode ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'}`} aria-label="Pose mode">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="12" cy="5" r="3" /><path d="M12 8v4" /><path d="M8 14l-3 6" /><path d="M16 14l3 6" /><path d="M12 12l-4 6" /><path d="M12 12l4 6" /><path d="M9 18l3-2 3 2" />
                   </svg>
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setShowPUNK(!showPUNK)} className={`p-2 rounded-full backdrop-blur-md transition-colors ${showPUNK ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'}`}>
+                <button onClick={() => setShowPUNK(!showPUNK)} className={`p-2 rounded-full backdrop-blur-md transition-colors ${showPUNK ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'}`} aria-label="PUNK AI">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="12" cy="12" r="10" /><path d="M12 6v12M6 12h12" /><circle cx="12" cy="12" r="3" fill="currentColor" />
                   </svg>
                 </button>
-                <button onClick={handleToggleCamera} className="p-2 rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors">
+                <button onClick={handleToggleCamera} className="p-2 rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors" aria-label="Switch camera">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" /><circle cx="12" cy="13" r="4" />
                   </svg>
@@ -252,7 +251,7 @@ function UltraAppInner() {
                   </div>
                   <ShutterButton onCapture={handleCapture} />
                   <div className="flex flex-col items-center gap-1">
-                    <button onClick={() => setShowDroneMode(!showDroneMode)} className={`p-3 rounded-full backdrop-blur-md border transition-all ${showDroneMode ? 'bg-[#6EE7B7]/30 border-[#6EE7B7]' : 'bg-white/10 border-white/10 hover:bg-white/20'}`}>
+                    <button onClick={() => setShowDroneMode(!showDroneMode)} className={`p-3 rounded-full backdrop-blur-md border transition-all ${showDroneMode ? 'bg-[#6EE7B7]/30 border-[#6EE7B7]' : 'bg-white/10 border-white/10 hover:bg-white/20'}`} aria-label="Drone mode">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={showDroneMode ? 'text-[#6EE7B7]' : 'text-white/70'}>
                         <path d="M12 2L2 9l10 7 10-7-10-7z" /><path d="M2 9v5l10 7 10-7V9" />
                       </svg>
@@ -267,7 +266,7 @@ function UltraAppInner() {
       )}
 
       {/* Pose Mode Controls */}
-      {showPoseMode && (
+      {showPoseMode && !loading && (
         <div className="absolute bottom-0 left-0 right-0 z-20 pointer-events-auto">
           <PoseControls currentPose={currentPose} genderSet={!!settings.gender} onRequestGender={() => setShowGenderSelect(true)} />
         </div>
@@ -280,7 +279,7 @@ function UltraAppInner() {
 
       {/* Gender Select */}
       <BottomSheet open={showGenderSelect} onClose={() => setShowGenderSelect(false)} height="60%" showHandle={false}>
-        <GenderSelector selected={selectedGender} onSelect={handleGenderSelect} onContinue={() => setShowGenderSelect(false)} />
+        <GenderSelector selected={selectedGender} onSelect={(g) => { setGender(g); useAppStore.getState().updateSettings({ gender: g }); setShowGenderSelect(false); }} onContinue={() => setShowGenderSelect(false)} />
       </BottomSheet>
 
       {/* Toast */}

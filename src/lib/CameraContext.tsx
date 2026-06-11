@@ -28,7 +28,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     streamRef.current = null;
   }, []);
 
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
@@ -49,6 +49,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
         await videoRef.current.play();
       }
       setLoading(false);
+      return true;
     } catch (err: any) {
       const msg = err.name === 'NotAllowedError'
         ? 'Camera access denied. Please enable camera permissions in your browser settings.'
@@ -57,6 +58,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
           : err.message || 'Camera access failed';
       setError(msg);
       setLoading(false);
+      return false;
     }
   }, [stopCamera]);
 

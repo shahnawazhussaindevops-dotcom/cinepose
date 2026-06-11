@@ -5,9 +5,10 @@ import { useCameraStore } from '../../stores/cameraStore';
 interface CameraFeedProps {
   onFrame?: (video: HTMLVideoElement) => void;
   className?: string;
+  children?: React.ReactNode;
 }
 
-export function CameraFeed({ onFrame, className = '' }: CameraFeedProps) {
+export function CameraFeed({ onFrame, className = '', children }: CameraFeedProps) {
   const { videoRef, canvasRef, loading, error, startCamera } = useCameraContext();
   const { facingFront } = useCameraStore();
   const animFrameRef = useRef<number>(0);
@@ -72,6 +73,8 @@ export function CameraFeed({ onFrame, className = '' }: CameraFeedProps) {
       {!loading && !error && (
         <div className="absolute inset-0 pointer-events-none border border-[#A78BFA]/5" />
       )}
+
+      {children}
     </div>
   );
 }
