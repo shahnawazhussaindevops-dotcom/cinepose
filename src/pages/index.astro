@@ -2,9 +2,9 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="CinePose — AI Cinematic Camera">
+<BaseLayout title="CinePose — Ultra AI Cinema Camera">
   <main class="min-h-screen">
-    <!-- Hero Section -->
+    <!-- Hero -->
     <section class="relative min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden">
       <div class="absolute inset-0 bg-gradient-to-b from-[#A78BFA]/10 via-transparent to-[#0D0D1A] pointer-events-none" />
       <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#A78BFA]/5 rounded-full blur-[100px] pointer-events-none" />
@@ -20,9 +20,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <span class="font-bold text-lg text-[#F9FAFB]">CinePose</span>
         </div>
         <div class="flex items-center gap-3">
-          <a href="/camera" class="text-sm text-[#6B7280] hover:text-[#F9FAFB] transition-colors">Launch App</a>
           <a href="/camera" class="px-4 py-2 rounded-full bg-[#A78BFA] text-white text-sm font-medium hover:bg-[#9678E8] transition-colors glow-violet">
-            Get Started
+            Launch App
           </a>
         </div>
       </nav>
@@ -30,102 +29,107 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="relative z-10 text-center max-w-3xl">
         <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 mb-6">
           <span class="w-2 h-2 rounded-full bg-[#6EE7B7]" />
-          <span class="text-xs text-[#6B7280]">AI-Powered Cinematic Camera</span>
+          <span class="text-xs text-[#6B7280]">12 AI Agents · Hollywood Cinema · On-Device</span>
         </div>
 
         <h1 class="text-5xl md:text-7xl font-bold leading-tight mb-6">
-          <span class="text-[#F9FAFB]">See the shot</span>
+          <span class="text-[#F9FAFB]">Your pocket</span>
           <br />
-          <span class="text-gradient">before you take it.</span>
+          <span class="text-gradient">Hollywood director.</span>
         </h1>
 
         <p class="text-lg text-[#6B7280] max-w-xl mx-auto mb-10 leading-relaxed">
-          The world's first AI camera with a 3D humanoid pose guide.
-          Real-time cinematic LUTs, smart lighting analysis, and drone simulation
-          — all on-device, privacy-first.
+          CinePose Ultra AI turns your smartphone into a complete film studio.
+          12 AI agents work together — photographer, cinematographer, stylist, director, and more.
         </p>
 
         <div class="flex items-center justify-center gap-4">
-          <a
-            href="/camera"
-            class="px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold text-base hover:bg-[#9678E8] transition-all glow-violet inline-flex items-center gap-2"
-          >
+          <a href="/camera" class="px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold text-base hover:bg-[#9678E8] transition-all glow-violet inline-flex items-center gap-2">
             Open Camera
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </a>
-          <a
-            href="/poses"
-            class="px-8 py-3.5 rounded-full bg-white/5 text-[#F9FAFB] font-semibold text-base border border-white/10 hover:bg-white/10 transition-all inline-flex items-center gap-2"
-          >
-            Browse Poses
-          </a>
         </div>
       </div>
 
-      <!-- Scroll indicator -->
       <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/30">
-        <span class="text-xs">Explore</span>
+        <span class="text-xs">Explore 12 AI Agents</span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-bounce">
           <path d="M12 5v14M19 12l-7 7-7-7" />
         </svg>
       </div>
     </section>
 
-    <!-- Features Section -->
+    <!-- 12 AI Agents -->
     <section class="px-6 py-24 max-w-6xl mx-auto">
       <div class="text-center mb-16">
-        <h2 class="text-3xl md:text-4xl font-bold text-[#F9FAFB] mb-4">
-          Everything you need for the perfect shot
-        </h2>
-        <p class="text-[#6B7280] max-w-lg mx-auto">
-          Professional-grade tools that were once exclusive to Hollywood post-production studios.
-        </p>
+        <h2 class="text-3xl md:text-4xl font-bold text-[#F9FAFB] mb-4">12 AI Agents. One Camera.</h2>
+        <p class="text-[#6B7280] max-w-lg mx-auto">Every CinePose Ultra AI feature works together in real-time to help you capture cinematic photos and videos.</p>
       </div>
 
-      <div class="grid md:grid-cols-3 gap-6">
+      <div class="grid md:grid-cols-3 lg:grid-cols-4 gap-4">
         {[
-          { icon: '✦', title: 'Cinematic LUT Engine', desc: 'DaVinci Resolve-quality color grading with 15+ presets. WebGL-powered, zero latency.', color: '#A78BFA' },
-          { icon: '⊹', title: 'AI Pose Robot', desc: '3D humanoid hologram that shows you the perfect pose for any scene. 20+ cinematic poses.', color: '#6EE7B7' },
-          { icon: '☀', title: 'Smart Lighting Analysis', desc: 'Real-time light metering with golden hour tracking and actionable suggestions.', color: '#FB923C' },
-          { icon: '◎', title: 'Drone Shot Simulator', desc: 'Aerial framing guides and cinematic movement paths without leaving the ground.', color: '#60A5FA' },
-          { icon: '◈', title: 'Pro Color Studio', desc: 'Full DaVinci-style grading with scopes, curves, and .cube LUT export.', color: '#A78BFA' },
-          { icon: '🔒', title: 'Privacy First', desc: 'All AI runs on-device. No images uploaded. Zero data leakage. Designed for trust.', color: '#6EE7B7' },
+          { icon: '📸', title: 'AI Photographer', desc: 'Live pose guidance, composition scoring, eye/blur detection. Auto burst and best-shot selection.', color: '#A78BFA' },
+          { icon: '🎬', title: 'AI Cinematographer', desc: 'Shot type recommendations, camera movements, shot lists. Live direction for every scene.', color: '#6EE7B7' },
+          { icon: '👔', title: 'AI Outfit Analyzer', desc: 'Detects your location and recommends colors, outfits, accessories, and footwear.', color: '#FB923C' },
+          { icon: '📍', title: 'AI Location Intel', desc: 'Beach, mountain, city, luxury property — 7 score categories, weather, best shooting time.', color: '#60A5FA' },
+          { icon: '🎯', title: 'Director Vision', desc: 'Analyzes foreground, depth, color palette, atmosphere. Visual storytelling potential.', color: '#A78BFA' },
+          { icon: '🌟', title: 'Hollywood Director', desc: '14 scene types. Step-by-step direction: camera, expression, movement, duration.', color: '#6EE7B7' },
+          { icon: '💬', title: 'CineGPT', desc: 'Ask anything: posing, outfits, lighting, angles, color grading. Your AI photography coach.', color: '#FB923C' },
+          { icon: '🎞️', title: 'AI Reel Generator', desc: 'Auto-generates shot sequences, transitions, music, text overlays for social media reels.', color: '#60A5FA' },
+          { icon: '🔬', title: 'Master Scene Analyzer', desc: 'Full scene analysis: pose, angle, lens, LUT, storytelling concept, reel idea.', color: '#A78BFA' },
+          { icon: '📈', title: 'Trend Integration', desc: 'Instagram & Pinterest trending poses, hashtags, styles. Always stay on trend.', color: '#F472B6' },
+          { icon: '👻', title: 'AR Pose Projection', desc: 'Holographic pose overlay on your camera. Match the guide in real time.', color: '#6EE7B7' },
+          { icon: '🧬', title: 'AI Human Clone', desc: '3D preview with pose simulation, outfit testing, and camera angle preview.', color: '#A78BFA' },
         ].map((feature) => (
-          <div class="glass rounded-2xl p-6 hover:border-white/20 transition-all">
-            <span class="text-3xl mb-4 block" style={{ color: feature.color }}>{feature.icon}</span>
-            <h3 class="text-lg font-semibold text-[#F9FAFB] mb-2">{feature.title}</h3>
-            <p class="text-sm text-[#6B7280] leading-relaxed">{feature.desc}</p>
+          <div class="glass rounded-2xl p-4 hover:border-white/20 transition-all hover:translate-y-[-2px]">
+            <span class="text-2xl mb-2 block">{feature.icon}</span>
+            <h3 class="text-sm font-semibold text-[#F9FAFB] mb-1">{feature.title}</h3>
+            <p class="text-[11px] text-[#6B7280] leading-relaxed">{feature.desc}</p>
           </div>
         ))}
       </div>
     </section>
 
-    <!-- Security Section -->
+    <!-- Features Grid -->
     <section class="px-6 py-20 bg-[#0D0D1A]/50">
-      <div class="max-w-4xl mx-auto text-center">
-        <h2 class="text-2xl md:text-3xl font-bold text-[#F9FAFB] mb-6">
-          Built for privacy. Designed for trust.
-        </h2>
-        <div class="grid md:grid-cols-3 gap-6 mt-10">
+      <div class="max-w-6xl mx-auto">
+        <div class="text-center mb-16">
+          <h2 class="text-3xl font-bold text-[#F9FAFB] mb-4">Everything you need</h2>
+          <p class="text-[#6B7280] max-w-lg mx-auto">Professional tools that were once exclusive to Hollywood post-production.</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
           {[
-            { title: 'On-Device AI', desc: 'All TensorFlow.js models run locally. Zero images leave your device.' },
-            { title: 'No Analytics', desc: 'No tracking SDKs. No telemetry by default. Optional crash reports only.' },
-            { title: 'End-to-End Secure', desc: 'HTTPS everywhere, CSP headers, certificate pinning, and Supabase RLS.' },
-          ].map((item) => (
-            <div class="p-4">
-              <div class="w-12 h-12 rounded-full bg-[#A78BFA]/10 flex items-center justify-center mx-auto mb-4">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                  <path d="M7 11V7a5 5 0 0110 0v4" />
-                </svg>
-              </div>
-              <h3 class="text-base font-semibold text-[#F9FAFB] mb-2">{item.title}</h3>
-              <p class="text-sm text-[#6B7280]">{item.desc}</p>
+            { icon: '✦', title: 'Cinematic LUT Engine', desc: 'DaVinci-quality color grading. 15+ presets. WebGL-powered real-time preview.', color: '#A78BFA' },
+            { icon: '⊹', title: '3D Pose Robot', desc: 'Humanoid hologram guide. Spring animations. Gender-variant proportions.', color: '#6EE7B7' },
+            { icon: '☀', title: 'Smart Lighting', desc: '9-zone metering, 11-class classifier, golden hour tracking.', color: '#FB923C' },
+            { icon: '◎', title: 'Drone Simulator', desc: 'Aerial framing, cinematic patterns, 5-keyframe capture.', color: '#60A5FA' },
+            { icon: '◈', title: 'Pro Color Studio', desc: 'DaVinci-style grading. .cube LUT export. Full scopes.', color: '#A78BFA' },
+            { icon: '🔒', title: 'Privacy First', desc: 'All AI on-device. No uploads. Zero data leakage. Designed for trust.', color: '#6EE7B7' },
+          ].map((feature) => (
+            <div class="glass rounded-2xl p-6 hover:border-white/20 transition-all">
+              <span class="text-3xl mb-4 block" style={{ color: feature.color }}>{feature.icon}</span>
+              <h3 class="text-lg font-semibold text-[#F9FAFB] mb-2">{feature.title}</h3>
+              <p class="text-sm text-[#6B7280] leading-relaxed">{feature.desc}</p>
             </div>
           ))}
         </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="px-6 py-24 text-center">
+      <div class="max-w-lg mx-auto">
+        <h2 class="text-3xl font-bold text-[#F9FAFB] mb-4">Ready to create cinema?</h2>
+        <p class="text-[#6B7280] mb-8">No sign up required. No cloud uploads. Just you and 12 AI agents.</p>
+        <a href="/camera" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold hover:bg-[#9678E8] transition-all glow-violet">
+          Launch CinePose Ultra
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </a>
       </div>
     </section>
 
@@ -135,7 +139,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div class="w-5 h-5 rounded bg-gradient-to-br from-[#A78BFA] to-[#6EE7B7]" />
         <span class="font-bold text-[#F9FAFB]">CinePose</span>
       </div>
-      <p class="text-xs text-[#6B7280]">See the shot before you take it.</p>
+      <p class="text-xs text-[#6B7280]">Your pocket Hollywood director.</p>
       <p class="text-[10px] text-[#4B5563] mt-2">2026 CinePose. All rights reserved.</p>
     </footer>
   </main>
