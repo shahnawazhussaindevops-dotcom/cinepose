@@ -33,11 +33,12 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       stopCamera();
+      const facingFront = useCameraStore.getState().facingFront;
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
-          facingMode: 'environment',
+          facingMode: facingFront ? 'user' : 'environment',
           frameRate: { ideal: 30 },
         },
         audio: false,
