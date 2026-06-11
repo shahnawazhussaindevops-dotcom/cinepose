@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react';
 import { useCameraStore } from '../stores/cameraStore';
 
 interface CameraContextValue {
@@ -12,11 +12,6 @@ interface CameraContextValue {
   captureFrame: () => ImageData | null;
   capturePhoto: () => string | null;
   takePhoto: () => string | null;
-  setZoom: (zoom: number) => void;
-  zoom: number;
-  isFlashOn: boolean;
-  facingFront: boolean;
-  toggleCamera: () => void;
 }
 
 const CameraContext = createContext<CameraContextValue | null>(null);
@@ -25,10 +20,8 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { facingFront, zoom, isFlashOn, setZoom, toggleCamera, setFlashOn } = useCameraStore();
 
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -44,8 +37,8 @@ export function CameraProvider({ children }: { children: ReactNode }) {
         video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
-          facingMode: facingFront ? 'user' : 'environment',
-          frameRate: { ideal: 60 },
+          facingMode: 'environment',
+          frameRate: { ideal: 30 },
         },
         audio: false,
       });
@@ -57,19 +50,14 @@ export function CameraProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     } catch (err: any) {
       const msg = err.name === 'NotAllowedError'
-        ? 'Camera access was denied. Please enable camera permissions in your browser settings.'
+        ? 'Camera access denied. Please enable camera permissions in your browser settings.'
         : err.name === 'NotFoundError'
           ? 'No camera found on this device.'
           : err.message || 'Camera access failed';
       setError(msg);
       setLoading(false);
     }
-  }, [facingFront, stopCamera]);
-
-  useEffect(() => {
-    startCamera();
-    return () => stopCamera();
-  }, [startCamera, stopCamera]);
+  }, [stopCamera]);
 
   const captureFrame = useCallback((): ImageData | null => {
     if (!videoRef.current || !canvasRef.current) return null;
@@ -91,13 +79,9 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
-    if (facingFront) {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
     ctx.drawImage(video, 0, 0);
     return canvas.toDataURL('image/jpeg', 0.95);
-  }, [facingFront]);
+  }, []);
 
   const takePhoto = useCallback(() => {
     const photoDataUrl = capturePhoto();
@@ -106,7 +90,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
         id: `${Date.now()}`,
         uri: photoDataUrl,
         thumbnail: photoDataUrl,
-        lut: 'revenant',
+        lut: 'cinematic',
         date: Date.now(),
         width: videoRef.current?.videoWidth || 1080,
         height: videoRef.current?.videoHeight || 1920,
@@ -119,9 +103,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   return (
     <CameraContext.Provider value={{
       videoRef, canvasRef, streamRef, loading, error,
-      startCamera, stopCamera,
-      captureFrame, capturePhoto, takePhoto,
-      setZoom, zoom, isFlashOn, facingFront, toggleCamera,
+      startCamera, stopCamera, captureFrame, capturePhoto, takePhoto,
     }}>
       {children}
     </CameraContext.Provider>
