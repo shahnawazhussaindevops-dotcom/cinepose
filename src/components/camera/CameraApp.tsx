@@ -8,6 +8,7 @@ import { HumanoidRobot } from '../pose/HumanoidRobot';
 import { PoseControls } from '../pose/PoseControls';
 import { GenderSelector } from '../pose/GenderSelector';
 import { DroneGuide } from '../drone/DroneGuide';
+import { PUNKOverlay } from '../punk/PUNKOverlay';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Toast } from '../ui/Toast';
 import { useCamera } from '../../hooks/useCamera';
@@ -31,6 +32,7 @@ export function CameraApp() {
   const [showGenderSelect, setShowGenderSelect] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'info' | 'success' | 'error' } | null>(null);
   const [showPoseControls, setShowPoseControls] = useState(false);
+  const [showPUNK, setShowPUNK] = useState(false);
 
   const currentPose = recommendedPoses[currentPoseIndex] || recommendedPoses[0];
 
@@ -101,6 +103,12 @@ export function CameraApp() {
         onClose={() => setShowDroneMode(false)}
       />
 
+      {/* PUNK AI Overlay */}
+      <PUNKOverlay
+        active={showPUNK}
+        onClose={() => setShowPUNK(false)}
+      />
+
       {/* Lighting Badge */}
       {lighting && !showPoseMode && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-10">
@@ -119,6 +127,7 @@ export function CameraApp() {
           onTogglePose={handleTogglePose}
           onToggleDrone={() => setShowDroneMode(!showDroneMode)}
           onOpenLUT={() => setShowLUTPicker(true)}
+          onTogglePUNK={() => setShowPUNK(!showPUNK)}
         />
       )}
 

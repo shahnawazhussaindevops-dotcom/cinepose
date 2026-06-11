@@ -10,9 +10,10 @@ interface CameraControlsProps {
   onTogglePose: () => void;
   onToggleDrone: () => void;
   onOpenLUT: () => void;
+  onTogglePUNK: () => void;
 }
 
-export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenLUT }: CameraControlsProps) {
+export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenLUT, onTogglePUNK }: CameraControlsProps) {
   const { isFlashOn, setFlashOn, facingFront, toggleCamera, zoom, setZoom } = useCameraStore();
   const { settings, showPoseMode, showDroneMode } = useAppStore();
 
@@ -64,6 +65,19 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={onTogglePUNK}
+              className={`p-2 rounded-full backdrop-blur-md transition-colors ${
+                showDroneMode ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'
+              }`}
+              title="PUNK AI"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v12M6 12h12" />
+                <circle cx="12" cy="12" r="3" fill="currentColor" />
+              </svg>
+            </button>
             <button
               onClick={onToggleDrone}
               className={`p-2 rounded-full backdrop-blur-md transition-colors ${
