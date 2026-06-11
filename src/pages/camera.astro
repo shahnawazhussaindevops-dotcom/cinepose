@@ -1,0 +1,10 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { CameraApp } from '../components/camera/CameraApp';
+---
+
+<BaseLayout title="Camera — CinePose">
+  <div class="fixed inset-0 z-0">
+    <CameraApp client:load />
+  </div>
+</BaseLayout>

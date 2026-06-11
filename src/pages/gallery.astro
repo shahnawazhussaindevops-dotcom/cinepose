@@ -1,0 +1,32 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Gallery — CinePose">
+  <main class="px-0 pt-6">
+    <div class="px-4 flex items-center justify-between mb-4">
+      <h1 class="text-xl font-bold text-[#F9FAFB]">Gallery</h1>
+      <div class="flex items-center gap-2">
+        <button class="p-2 rounded-full bg-white/5 text-white/50 hover:text-[#F9FAFB] transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+          </svg>
+        </button>
+        <button class="p-2 rounded-full bg-white/5 text-white/50 hover:text-[#F9FAFB] transition-colors">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 3v18M3 12h18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Photo Grid -->
+    <div class="grid grid-cols-3 gap-0.5">
+      {[...Array(9)].map((_, i) => (
+        <div key={i} class="aspect-square bg-white/5 flex items-center justify-center">
+          <div class="w-full h-full bg-gradient-to-br from-[#A78BFA]/10 to-[#6EE7B7]/5 animate-pulse" />
+        </div>
+      ))}
+    </div>
+  </main>
+</AppLayout>

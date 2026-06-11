@@ -1,0 +1,48 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Pose Library — CinePose">
+  <main class="px-4 pt-6">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-xl font-bold text-[#F9FAFB]">Pose Library</h1>
+      <button class="px-3 py-1.5 rounded-full bg-[#A78BFA]/20 text-[#A78BFA] text-xs font-medium">Filter</button>
+    </div>
+
+    <!-- Category Pills -->
+    <div class="flex gap-2 overflow-x-auto mb-6 pb-1 scrollbar-hide">
+      {['All', 'Standing', 'Urban', 'Nature', 'Mountain', 'Sitting', 'Candid', 'Action'].map((cat) => (
+        <button key={cat} class={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+          cat === 'All' ? 'bg-[#A78BFA] text-white' : 'bg-white/5 text-[#6B7280] hover:text-[#F9FAFB]'
+        }`}>
+          {cat}
+        </button>
+      ))}
+    </div>
+
+    <!-- Pose Grid -->
+    <div class="grid grid-cols-2 gap-3">
+      {[
+        { name: 'Confident Stand', icon: '⊢', desc: 'Weight on one leg, relaxed arms' },
+        { name: 'Crossed Arms', icon: '⊣', desc: 'Urban confidence' },
+        { name: 'Hand in Pocket', icon: '⊢', desc: 'Casual street style' },
+        { name: 'Looking Away', icon: '◐', desc: 'Over the shoulder' },
+        { name: 'Walking Step', icon: '⊨', desc: 'Mid-stride motion' },
+        { name: 'Arms Out', icon: '⊤', desc: 'Embrace the landscape' },
+        { name: 'Leaning Wall', icon: '⊣', desc: 'Casual lean' },
+        { name: 'Sitting Steps', icon: '⊥', desc: 'Staircase aesthetic' },
+      ].map((pose) => (
+        <a
+          href={`/pose-detail/${pose.name.toLowerCase().replace(/\s+/g, '-')}`}
+          class="glass rounded-2xl p-4 hover:border-[#A78BFA]/30 transition-all group"
+        >
+          <div class="flex items-center justify-center h-20 mb-3 rounded-xl bg-white/5">
+            <span class="text-3xl text-[#A78BFA] opacity-50 group-hover:opacity-100 transition-opacity">{pose.icon}</span>
+          </div>
+          <h3 class="text-sm font-semibold text-[#F9FAFB] mb-1">{pose.name}</h3>
+          <p class="text-xs text-[#6B7280]">{pose.desc}</p>
+        </a>
+      ))}
+    </div>
+  </main>
+</AppLayout>
