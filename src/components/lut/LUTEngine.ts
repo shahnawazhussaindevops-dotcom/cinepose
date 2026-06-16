@@ -153,47 +153,26 @@ export function applyLUT(
   gl: WebGL2RenderingContext,
   program: WebGLProgram,
   frameTexture: WebGLTexture,
-  params: Record<string, number>,
+  params: Record<string, any>,
   width: number,
   height: number
 ): void {
   gl.useProgram(program);
   gl.viewport(0, 0, width, height);
 
-  const uniformMap: Record<string, string> = {
-    u_frame: 'u_frame',
-    u_shadowsR: 'u_shadows[0]',
-    u_shadowsG: 'u_shadows[1]',
-    u_shadowsB: 'u_shadows[2]',
-    u_midsR: 'u_mids[0]',
-    u_midsG: 'u_mids[1]',
-    u_midsB: 'u_mids[2]',
-    u_highlightsR: 'u_highlights[0]',
-    u_highlightsG: 'u_highlights[1]',
-    u_highlightsB: 'u_highlights[2]',
-    u_saturation: 'u_saturation',
-    u_contrast: 'u_contrast',
-    u_temperature: 'u_temperature',
-    u_tint: 'u_tint',
-    u_intensity: 'u_intensity',
-    u_liftR: 'u_liftR',
-    u_liftG: 'u_liftG',
-    u_liftB: 'u_liftB',
-    u_gammaR: 'u_gammaR',
-    u_gammaG: 'u_gammaG',
-    u_gammaB: 'u_gammaB',
-    u_gainR: 'u_gainR',
-    u_gainG: 'u_gainG',
-    u_gainB: 'u_gainB',
-    u_exposure: 'u_exposure',
-    u_vignette: 'u_vignette',
-    u_resolutionX: 'u_resolution[0]',
-    u_resolutionY: 'u_resolution[1]',
-  };
-
   Object.entries(params).forEach(([key, value]) => {
     const loc = gl.getUniformLocation(program, key);
-    if (loc) {
+    if (!loc) return;
+
+    if (Array.isArray(value)) {
+      if (value.length === 3) {
+        gl.uniform3f(loc, value[0], value[1], value[2]);
+      } else if (value.length === 2) {
+        gl.uniform2f(loc, value[0], value[1]);
+      } else if (value.length === 4) {
+        gl.uniform4f(loc, value[0], value[1], value[2], value[3]);
+      }
+    } else if (typeof value === 'number') {
       gl.uniform1f(loc, value);
     }
   });

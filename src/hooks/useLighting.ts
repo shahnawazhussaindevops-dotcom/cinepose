@@ -7,6 +7,7 @@ export function useLighting() {
   const [lighting, setLighting] = useState<LightingData | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const frameRef = useRef<number>(0);
+  const analyzingRef = useRef(false);
   const { setCurrentLighting } = useCameraStore();
 
   const analyzeFromVideo = useCallback((video: HTMLVideoElement) => {
@@ -28,18 +29,20 @@ export function useLighting() {
   }, [setCurrentLighting]);
 
   const startAnalysis = useCallback((video: HTMLVideoElement) => {
+    analyzingRef.current = true;
     setAnalyzing(true);
 
     const loop = () => {
-      if (!analyzing) return;
+      if (!analyzingRef.current) return;
       analyzeFromVideo(video);
       frameRef.current = requestAnimationFrame(loop);
     };
 
     frameRef.current = requestAnimationFrame(loop);
-  }, [analyzeFromVideo, analyzing]);
+  }, [analyzeFromVideo]);
 
   const stopAnalysis = useCallback(() => {
+    analyzingRef.current = false;
     setAnalyzing(false);
     if (frameRef.current) {
       cancelAnimationFrame(frameRef.current);
@@ -48,6 +51,7 @@ export function useLighting() {
 
   useEffect(() => {
     return () => {
+      analyzingRef.current = false;
       if (frameRef.current) {
         cancelAnimationFrame(frameRef.current);
       }

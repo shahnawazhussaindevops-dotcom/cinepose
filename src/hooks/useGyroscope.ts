@@ -69,11 +69,14 @@ export function useGyroscope() {
 
   const detectCameraAngle = (): 'eye_level' | 'low_angle' | 'high_angle' | 'bird_eye' | 'overhead' => {
     const tilt = lastData.current.tiltAngle;
+    const beta = lastData.current.beta;
+    const tiltedUp = beta < 80;
+    const tiltedDown = beta > 100;
 
-    if (tilt > 60) return 'overhead';
+    if (tilt > 60 && tiltedUp) return 'overhead';
+    if (tilt > 60 && tiltedDown) return 'low_angle';
     if (tilt > 30) return 'bird_eye';
-    if (tilt < 15) return 'low_angle';
-    if (tilt > 15 && tilt < 30) return 'high_angle';
+    if (tilt > 15) return 'high_angle';
     return 'eye_level';
   };
 

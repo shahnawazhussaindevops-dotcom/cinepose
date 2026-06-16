@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../ui/GlassCard';
 import { masterSceneAnalyzer } from '../../lib/ultra-ai/masterSceneAnalyzer';
 import { useUltraStore } from '../../stores/ultraStore';
+import { useCameraStore } from '../../stores/cameraStore';
+import { usePoseStore } from '../../stores/poseStore';
 
 interface MasterScenePanelProps {
   luminance: number;
@@ -13,11 +15,61 @@ interface MasterScenePanelProps {
 
 export function MasterScenePanel({ luminance, temperature, isGoldenHour, isBacklit, tiltAngle }: MasterScenePanelProps) {
   const { masterResult, setMasterResult, setActiveMode } = useUltraStore();
+  const [analyzingAI, setAnalyzingAI] = useState(false);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
 
   useEffect(() => {
     const result = masterSceneAnalyzer.analyze(luminance, temperature, isGoldenHour, isBacklit, tiltAngle);
     setMasterResult(result);
   }, [luminance, temperature, isGoldenHour, isBacklit, tiltAngle, setMasterResult]);
+
+  const handleAIAnalyze = async () => {
+    if (!masterResult) return;
+    setAnalyzingAI(true);
+    setAiNotice(null);
+
+    try {
+      const selectedGender = usePoseStore.getState().selectedGender;
+      const currentLighting = useCameraStore.getState().currentLighting;
+
+      const res = await fetch('/api/scene-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sceneType: masterResult.location.locationType === 'unknown' ? 'urban' : masterResult.location.locationType,
+          lighting: currentLighting?.condition || 'bright_daylight',
+          cameraAngle: 'eye_level',
+          genderPreference: selectedGender,
+        }),
+      });
+
+      if (res.status === 503) {
+        setAiNotice('Offline mode: Using local pose intelligence. Define ANTHROPIC_API_KEY for Claude suggestions.');
+        setAnalyzingAI(false);
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error('Claude service returned an error');
+      }
+
+      const aiData = await res.json();
+      setMasterResult({
+        ...masterResult,
+        bestPose: aiData.poses ? aiData.poses.join(', ') : masterResult.bestPose,
+        bestStorytellingConcept: aiData.mood || masterResult.bestStorytellingConcept,
+        overallRecommendation: `${aiData.composition_tip || ''} ${
+          aiData.poses ? 'AI recommended poses: ' + aiData.poses.join(' / ') : ''
+        }`,
+      });
+      setAiNotice('Claude AI Scene Analysis completed successfully!');
+    } catch (err) {
+      console.error(err);
+      setAiNotice('Failed to connect to cloud AI. Running in local-only mode.');
+    } finally {
+      setAnalyzingAI(false);
+    }
+  };
 
   if (!masterResult) return null;
 
@@ -67,9 +119,25 @@ export function MasterScenePanel({ luminance, temperature, isGoldenHour, isBackl
             </div>
           </div>
 
-          <div className="pt-2 border-t border-white/5">
-            <p className="text-[9px] font-medium text-[#A78BFA] mb-1">Recommendation</p>
-            <p className="text-[10px] text-white/70 leading-relaxed">{masterResult.overallRecommendation}</p>
+          <div className="pt-2 border-t border-white/5 space-y-3">
+            <div>
+              <p className="text-[9px] font-medium text-[#A78BFA] mb-1">Recommendation</p>
+              <p className="text-[10px] text-white/70 leading-relaxed">{masterResult.overallRecommendation}</p>
+            </div>
+
+            {aiNotice && (
+              <div className="p-2 rounded bg-white/5 border border-white/10 text-[9px] text-[#6EE7B7] leading-relaxed">
+                {aiNotice}
+              </div>
+            )}
+
+            <button
+              onClick={handleAIAnalyze}
+              disabled={analyzingAI}
+              className="w-full py-2 rounded-xl bg-gradient-to-r from-[#A78BFA] to-[#6EE7B7] hover:opacity-90 disabled:opacity-50 text-white font-semibold text-xs tracking-wide transition-opacity shadow-[0_0_15px_rgba(167,139,250,0.2)]"
+            >
+              {analyzingAI ? 'Analyzing with Claude...' : '✦ Analyze with Cloud AI'}
+            </button>
           </div>
         </GlassCard>
       </div>

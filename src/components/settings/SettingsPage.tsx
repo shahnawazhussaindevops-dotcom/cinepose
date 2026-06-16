@@ -1,4 +1,6 @@
 import React from 'react';
+import { useAppStore } from '../../stores/appStore';
+import { t } from '../../lib/i18n';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -11,14 +13,14 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function SettingRow({ label, value, isToggle = false }: { label: string; value: string; isToggle?: boolean }) {
+function SettingRow({ label, value, isToggle = false, onToggle }: { label: string; value: string; isToggle?: boolean; onToggle?: () => void }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <span className="text-sm text-[#F9FAFB]">{label}</span>
       {isToggle ? (
-        <div className="w-10 h-6 rounded-full bg-[#A78BFA] relative cursor-pointer">
-          <div className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-white shadow" />
-        </div>
+        <button onClick={onToggle} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${value === 'On' ? 'bg-[#A78BFA]' : 'bg-white/20'}`}>
+          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${value === 'On' ? 'right-0.5' : 'left-0.5'}`} />
+        </button>
       ) : (
         <span className="text-sm text-[#6B7280]">{value}</span>
       )}
@@ -27,24 +29,26 @@ function SettingRow({ label, value, isToggle = false }: { label: string; value: 
 }
 
 export function SettingsPage() {
+  const { settings, updateSettings } = useAppStore();
+
   return (
     <main className="px-4 pt-6 space-y-6">
       <h1 className="text-xl font-bold text-[#F9FAFB]">Settings</h1>
 
       <Section title="Appearance">
-        <SettingRow label="Theme" value="Dark" />
-        <SettingRow label="Language" value="English" />
+        <SettingRow label="Theme" value={settings.theme === 'dark' ? 'Dark' : 'Light'} />
+        <SettingRow label="Language" value={settings.language === 'en' ? 'English' : 'Urdu'} />
       </Section>
 
       <Section title="Camera Defaults">
-        <SettingRow label="Grid Overlay" value="Off" isToggle />
-        <SettingRow label="Focus Peaking" value="Off" isToggle />
-        <SettingRow label="Live Histogram" value="Off" isToggle />
-        <SettingRow label="Level Indicator" value="On" isToggle />
+        <SettingRow label="Grid Overlay" value={settings.gridOverlay === 'off' ? 'Off' : settings.gridOverlay} isToggle onToggle={() => updateSettings({ gridOverlay: settings.gridOverlay === 'off' ? 'rule_of_thirds' : 'off' })} />
+        <SettingRow label="Focus Peaking" value={settings.focusPeaking ? 'On' : 'Off'} isToggle onToggle={() => updateSettings({ focusPeaking: !settings.focusPeaking })} />
+        <SettingRow label="Live Histogram" value={settings.histogram ? 'On' : 'Off'} isToggle onToggle={() => updateSettings({ histogram: !settings.histogram })} />
+        <SettingRow label="Level Indicator" value={settings.levelIndicator ? 'On' : 'Off'} isToggle onToggle={() => updateSettings({ levelIndicator: !settings.levelIndicator })} />
       </Section>
 
       <Section title="Pose Preferences">
-        <SettingRow label="Gender" value="Prefer not to say" />
+        <SettingRow label="Gender" value={settings.gender === 'neutral' ? 'Prefer not to say' : settings.gender === 'male' ? 'Male' : 'Female'} />
       </Section>
 
       <Section title="Privacy & Security">
@@ -55,8 +59,8 @@ export function SettingsPage() {
           </svg>
           Privacy First — All AI runs on your device
         </p>
-        <SettingRow label="Cloud Backup" value="Off" isToggle />
-        <SettingRow label="Crash Telemetry" value="Off" isToggle />
+        <SettingRow label="Cloud Backup" value={settings.cloudBackup ? 'On' : 'Off'} isToggle onToggle={() => updateSettings({ cloudBackup: !settings.cloudBackup })} />
+        <SettingRow label="Crash Telemetry" value={settings.telemetry ? 'On' : 'Off'} isToggle onToggle={() => updateSettings({ telemetry: !settings.telemetry })} />
         <button className="w-full text-left text-sm text-red-400 py-3 border-t border-white/5">
           Delete My Data
         </button>

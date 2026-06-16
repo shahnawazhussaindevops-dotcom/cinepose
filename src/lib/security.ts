@@ -82,7 +82,8 @@ export const CONTENT_SECURITY_POLICY = {
   'img-src': ["'self'", 'blob:', 'data:', 'https://*.supabase.co'],
   'media-src': ["'self'", 'blob:'],
   'worker-src': ["'self'", 'blob:'],
-  'script-src': ["'self'", "'wasm-unsafe-eval'"],
+  'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "'wasm-unsafe-eval'"],
+  'style-src': ["'self'", "'unsafe-inline'"],
 };
 
 export function generateCSP(): string {

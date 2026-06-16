@@ -14,7 +14,7 @@ export function PermissionsGate({ onStartCamera, onComplete }: PermissionsGatePr
     setStep('starting');
     const success = await onStartCamera();
     if (success) {
-      setStep('gender');
+      onComplete('neutral');
     } else {
       setStep('error');
       setErrorMsg('Camera access was denied or unavailable. Please enable camera permissions in your browser settings and try again.');
@@ -77,41 +77,11 @@ export function PermissionsGate({ onStartCamera, onComplete }: PermissionsGatePr
     );
   }
 
-  // Gender step
+  // Gender step skipped, automatically completing
   return (
     <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center px-6">
-      <h2 className="text-2xl font-bold text-[#F9FAFB] mb-2">You're live!</h2>
-      <p className="text-[#6B7280] mb-8 text-center">Select your preference for pose recommendations</p>
-
-      <div className="grid grid-cols-3 gap-4 w-full max-w-sm mb-10">
-        {[
-          { id: 'male' as const, icon: '♂', label: 'Male', desc: 'Masculine silhouettes' },
-          { id: 'female' as const, icon: '♀', label: 'Female', desc: 'Feminine silhouettes' },
-          { id: 'neutral' as const, icon: '⊹', label: 'Neutral', desc: 'Androgynous styles' },
-        ].map((g) => (
-          <button
-            key={g.id}
-            onClick={() => setGender(g.id)}
-            className={`flex flex-col items-center gap-2 p-5 rounded-2xl border transition-all ${
-              gender === g.id
-                ? 'bg-[#A78BFA]/20 border-[#A78BFA] shadow-[0_0_20px_rgba(167,139,250,0.2)]'
-                : 'bg-white/5 border-white/10 hover:bg-white/10'
-            }`}
-          >
-            <span className="text-3xl" style={{ color: gender === g.id ? '#A78BFA' : '#6B7280' }}>{g.icon}</span>
-            <span className="text-sm font-medium text-[#F9FAFB]">{g.label}</span>
-            <span className="text-[10px] text-[#6B7280]">{g.desc}</span>
-          </button>
-        ))}
-      </div>
-
-      <button
-        onClick={() => gender && onComplete(gender)}
-        disabled={!gender}
-        className="w-full max-w-sm px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold hover:bg-[#9678E8] transition-all glow-violet disabled:opacity-50"
-      >
-        Start Shooting
-      </button>
+      <div className="w-16 h-16 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mb-8" />
+      <p className="text-[#F9FAFB] font-medium">Ready!</p>
     </div>
   );
 }

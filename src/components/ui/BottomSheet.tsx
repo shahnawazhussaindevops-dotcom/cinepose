@@ -16,6 +16,7 @@ export function BottomSheet({ open, onClose, title, children, height = '40%', sh
   const isDragging = useRef(false);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!(e.target as HTMLElement).closest('[data-drag-handle]')) return;
     startY.current = e.clientY;
     isDragging.current = true;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -64,15 +65,15 @@ export function BottomSheet({ open, onClose, title, children, height = '40%', sh
         ref={sheetRef}
         className="relative w-full rounded-t-2xl bg-[#111827] border-t border-white/10 transition-transform duration-300 ease-out"
         style={{ height, maxHeight: '90vh' }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
       >
         {showHandle && (
           <div
-            className="flex justify-center py-3 cursor-grab active:cursor-grabbing"
+            data-drag-handle
+            className="flex justify-center py-3 cursor-grab active:cursor-grabbing touch-none"
             onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
           >
             <div className="w-10 h-1 rounded-full bg-white/30" />
           </div>

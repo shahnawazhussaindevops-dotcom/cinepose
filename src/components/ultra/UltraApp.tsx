@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { CameraProvider, useCameraContext } from '../../lib/CameraContext';
 import { CameraFeed } from '../camera/CameraFeed';
 import { ShutterButton } from '../camera/ShutterButton';
@@ -11,20 +11,22 @@ import { DroneGuide } from '../drone/DroneGuide';
 import { PUNKOverlay } from '../punk/PUNKOverlay';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Toast } from '../ui/Toast';
+import { ErrorBoundary } from '../ui/ErrorBoundary';
 import { PermissionsGate } from './PermissionsGate';
-import { AIPhotographerPanel } from './AIPhotographerPanel';
-import { AICinematographerPanel } from './AICinematographerPanel';
-import { AIOutfitPanel } from './AIOutfitPanel';
-import { AILocationPanel } from './AILocationPanel';
-import { DirectorVisionPanel } from './DirectorVisionPanel';
-import { HollywoodDirectorPanel } from './HollywoodDirectorPanel';
 import { MoodDetectionBadge } from './MoodDetectionBadge';
-import { CineGPTPanel } from './CineGPTPanel';
-import { AIReelGeneratorPanel } from './AIReelGeneratorPanel';
-import { MasterScenePanel } from './MasterScenePanel';
-import { TrendPanel } from './TrendPanel';
-import { ARPoseProjection } from './ARPoseProjection';
-import { AIHumanClonePanel } from './AIHumanClonePanel';
+
+const AIPhotographerPanel = lazy(() => import('./AIPhotographerPanel').then(m => ({ default: m.AIPhotographerPanel })));
+const AICinematographerPanel = lazy(() => import('./AICinematographerPanel').then(m => ({ default: m.AICinematographerPanel })));
+const AIOutfitPanel = lazy(() => import('./AIOutfitPanel').then(m => ({ default: m.AIOutfitPanel })));
+const AILocationPanel = lazy(() => import('./AILocationPanel').then(m => ({ default: m.AILocationPanel })));
+const DirectorVisionPanel = lazy(() => import('./DirectorVisionPanel').then(m => ({ default: m.DirectorVisionPanel })));
+const HollywoodDirectorPanel = lazy(() => import('./HollywoodDirectorPanel').then(m => ({ default: m.HollywoodDirectorPanel })));
+const CineGPTPanel = lazy(() => import('./CineGPTPanel').then(m => ({ default: m.CineGPTPanel })));
+const AIReelGeneratorPanel = lazy(() => import('./AIReelGeneratorPanel').then(m => ({ default: m.AIReelGeneratorPanel })));
+const MasterScenePanel = lazy(() => import('./MasterScenePanel').then(m => ({ default: m.MasterScenePanel })));
+const TrendPanel = lazy(() => import('./TrendPanel').then(m => ({ default: m.TrendPanel })));
+const ARPoseProjection = lazy(() => import('./ARPoseProjection').then(m => ({ default: m.ARPoseProjection })));
+const AIHumanClonePanel = lazy(() => import('./AIHumanClonePanel').then(m => ({ default: m.AIHumanClonePanel })));
 import { useCameraStore } from '../../stores/cameraStore';
 import { usePoseStore } from '../../stores/poseStore';
 import { useLUTStore } from '../../stores/lutStore';
@@ -57,6 +59,49 @@ function UltraAppInner() {
   const [showPUNK, setShowPUNK] = useState(false);
   const [appReady, setAppReady] = useState(false);
   const [modeOpen, setModeOpen] = useState<'photographer'|'cinematographer'|'outfit'|'location'|'director'|'hollywood'|'master'|'reel'|'cinegpt'|'trends'|'ar'|'clone'|null>(null);
+
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const touchEnd = e.changedTouches[0].clientX;
+    const diff = touchStart - touchEnd;
+
+    if (Math.abs(diff) > 60) {
+      if (diff > 0) {
+        if (showPoseMode) {
+          usePoseStore.getState().nextPose();
+        } else {
+          const lutStore = useLUTStore.getState();
+          const curIndex = lutStore.presets.findIndex(p => p.id === currentLUT.id);
+          if (curIndex !== -1) {
+            const nextIndex = (curIndex + 1) % lutStore.presets.length;
+            lutStore.setCurrentLUT(lutStore.presets[nextIndex]);
+            setToast({ message: `LUT: ${lutStore.presets[nextIndex].name}`, type: 'info' });
+            setTimeout(() => setToast(null), 1200);
+          }
+        }
+      } else {
+        if (showPoseMode) {
+          usePoseStore.getState().prevPose();
+        } else {
+          const lutStore = useLUTStore.getState();
+          const curIndex = lutStore.presets.findIndex(p => p.id === currentLUT.id);
+          if (curIndex !== -1) {
+            const prevIndex = (curIndex - 1 + lutStore.presets.length) % lutStore.presets.length;
+            lutStore.setCurrentLUT(lutStore.presets[prevIndex]);
+            setToast({ message: `LUT: ${lutStore.presets[prevIndex].name}`, type: 'info' });
+            setTimeout(() => setToast(null), 1200);
+          }
+        }
+      }
+    }
+    setTouchStart(null);
+  };
 
   const currentPose = recommendedPoses[currentPoseIndex] || recommendedPoses[0];
 
@@ -138,7 +183,7 @@ function UltraAppInner() {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black">
+    <div className="fixed inset-0 bg-black" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {/* Camera Feed */}
       <CameraFeed onFrame={(video) => { if (lighting) setCurrentLighting(lighting); }} />
 
@@ -169,18 +214,20 @@ function UltraAppInner() {
       <PUNKOverlay active={showPUNK} onClose={() => setShowPUNK(false)} />
 
       {/* AI Mode Panels */}
-      {modeOpen === 'photographer' && <AIPhotographerPanel luminance={sceneLuminance} temperature={sceneTemperature} />}
-      {modeOpen === 'cinematographer' && <AICinematographerPanel />}
-      {modeOpen === 'outfit' && <AIOutfitPanel />}
-      {modeOpen === 'location' && <AILocationPanel luminance={sceneLuminance} temperature={sceneTemperature} isGoldenHour={isGoldenHour} tiltAngle={tiltAngle} />}
-      {modeOpen === 'director' && <DirectorVisionPanel isGoldenHour={isGoldenHour} />}
-      {modeOpen === 'hollywood' && <HollywoodDirectorPanel />}
-      {modeOpen === 'cinegpt' && <CineGPTPanel />}
-      {modeOpen === 'reel' && <AIReelGeneratorPanel isGoldenHour={isGoldenHour} />}
-      {modeOpen === 'master' && <MasterScenePanel luminance={sceneLuminance} temperature={sceneTemperature} isGoldenHour={isGoldenHour} isBacklit={isBacklit} tiltAngle={tiltAngle} />}
-      {modeOpen === 'trends' && <TrendPanel />}
-      {modeOpen === 'ar' && <ARPoseProjection visible />}
-      {modeOpen === 'clone' && <AIHumanClonePanel />}
+      <Suspense fallback={<div className="absolute bottom-32 left-1/2 -translate-x-1/2"><div className="w-8 h-8 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin" /></div>}>
+        {modeOpen === 'photographer' && <AIPhotographerPanel luminance={sceneLuminance} temperature={sceneTemperature} />}
+        {modeOpen === 'cinematographer' && <AICinematographerPanel />}
+        {modeOpen === 'outfit' && <AIOutfitPanel />}
+        {modeOpen === 'location' && <AILocationPanel luminance={sceneLuminance} temperature={sceneTemperature} isGoldenHour={isGoldenHour} tiltAngle={tiltAngle} />}
+        {modeOpen === 'director' && <DirectorVisionPanel isGoldenHour={isGoldenHour} />}
+        {modeOpen === 'hollywood' && <HollywoodDirectorPanel />}
+        {modeOpen === 'cinegpt' && <CineGPTPanel />}
+        {modeOpen === 'reel' && <AIReelGeneratorPanel isGoldenHour={isGoldenHour} />}
+        {modeOpen === 'master' && <MasterScenePanel luminance={sceneLuminance} temperature={sceneTemperature} isGoldenHour={isGoldenHour} isBacklit={isBacklit} tiltAngle={tiltAngle} />}
+        {modeOpen === 'trends' && <TrendPanel />}
+        {modeOpen === 'ar' && <ARPoseProjection visible />}
+        {modeOpen === 'clone' && <AIHumanClonePanel />}
+      </Suspense>
 
       {/* Mood + Lighting Badges */}
       {!modeOpen && !showPoseMode && !showPUNK && !loading && (
@@ -291,7 +338,9 @@ function UltraAppInner() {
 export function UltraApp() {
   return (
     <CameraProvider>
-      <UltraAppInner />
+      <ErrorBoundary>
+        <UltraAppInner />
+      </ErrorBoundary>
     </CameraProvider>
   );
 }

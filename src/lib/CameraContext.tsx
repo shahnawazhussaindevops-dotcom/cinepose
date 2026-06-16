@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react';
 import { useCameraStore } from '../stores/cameraStore';
+import { useLUTStore } from '../stores/lutStore';
 
 interface CameraContextValue {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -7,7 +8,7 @@ interface CameraContextValue {
   streamRef: React.MutableRefObject<MediaStream | null>;
   loading: boolean;
   error: string | null;
-  startCamera: () => Promise<void>;
+  startCamera: () => Promise<boolean>;
   stopCamera: () => void;
   captureFrame: () => ImageData | null;
   capturePhoto: () => string | null;
@@ -78,8 +79,15 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     if (!videoRef.current || !canvasRef.current) return null;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    
+    // Check if the canvas has already been initialized with WebGL
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (gl) {
+      return canvas.toDataURL('image/jpeg', 0.95);
+    }
+
+    canvas.width = video.videoWidth || 1920;
+    canvas.height = video.videoHeight || 1080;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.drawImage(video, 0, 0);
@@ -89,11 +97,12 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   const takePhoto = useCallback(() => {
     const photoDataUrl = capturePhoto();
     if (photoDataUrl) {
+      const currentLutId = useLUTStore.getState().currentLUT.id;
       const photo = {
         id: `${Date.now()}`,
         uri: photoDataUrl,
         thumbnail: photoDataUrl,
-        lut: 'cinematic',
+        lut: currentLutId,
         date: Date.now(),
         width: videoRef.current?.videoWidth || 1080,
         height: videoRef.current?.videoHeight || 1920,

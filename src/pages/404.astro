@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Page Not Found — CinePose">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#0D0D1A] p-6">
+    <div class="text-center max-w-sm">
+      <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-[#A78BFA]/10 flex items-center justify-center">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="1.5">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4M12 16h.01" />
+        </svg>
+      </div>
+      <h1 class="text-4xl font-bold text-[#F9FAFB] mb-2">404</h1>
+      <p class="text-sm text-[#6B7280] mb-8">This frame doesn't exist in our reel.</p>
+      <a
+        href="/"
+        class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#A78BFA] text-white text-sm font-medium hover:bg-[#9678E8] transition-colors"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
+        Back to Camera
+      </a>
+    </div>
+  </div>
+</BaseLayout>

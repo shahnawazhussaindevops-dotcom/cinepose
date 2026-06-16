@@ -43,7 +43,7 @@ export const useCameraStore = create<CameraState>((set) => ({
   focusPoint: null,
 
   setRecording: (recording) => set({ isRecording: recording }),
-  setFlashOn: (on) => set({ isFlashOn: on, torchMode: on }),
+  setFlashOn: (on) => set({ isFlashOn: on }),
   setZoom: (zoom) => set({ zoom: Math.max(1, Math.min(10, zoom)) }),
   setFacingFront: (front) => set({ facingFront: front }),
   toggleCamera: () => set((state) => ({ facingFront: !state.facingFront })),

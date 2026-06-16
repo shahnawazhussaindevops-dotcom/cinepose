@@ -15,10 +15,18 @@ export default defineConfig({
     },
     imageService: true,
   }),
+  server: {
+    host: true,
+  },
   vite: {
     plugins: [tailwindcss()],
     ssr: {
       noExternal: ['@react-three/fiber', '@react-three/drei', 'three', 'framer-motion', 'zustand'],
+    },
+    server: {
+      watch: {
+        ignored: ['**/dist/**', '**/.vercel/**'],
+      },
     },
   },
 });
