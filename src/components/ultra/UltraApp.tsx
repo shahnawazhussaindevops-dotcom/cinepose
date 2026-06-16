@@ -164,7 +164,7 @@ function UltraAppInner() {
   if (!appReady) {
     return (
       <CameraFeed>
-        <PermissionsGate onStartCamera={handleStartCamera} onComplete={handlePermissionsComplete} />
+        <PermissionsGate onStartCamera={handleStartCamera} onComplete={handlePermissionsComplete} contextError={error} />
       </CameraFeed>
     );
   }

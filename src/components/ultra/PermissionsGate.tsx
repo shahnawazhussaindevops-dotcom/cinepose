@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 interface PermissionsGateProps {
   onStartCamera: () => Promise<boolean>;
   onComplete: (gender: 'male' | 'female' | 'neutral') => void;
+  contextError?: string | null;
 }
 
-export function PermissionsGate({ onStartCamera, onComplete }: PermissionsGateProps) {
+export function PermissionsGate({ onStartCamera, onComplete, contextError }: PermissionsGateProps) {
   const [step, setStep] = useState<'welcome' | 'starting' | 'gender' | 'error'>('welcome');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [gender, setGender] = useState<'male' | 'female' | 'neutral' | null>(null);
@@ -66,7 +67,7 @@ export function PermissionsGate({ onStartCamera, onComplete }: PermissionsGatePr
           </svg>
         </div>
         <h2 className="text-xl font-bold text-[#F9FAFB] mb-2">Camera Access Required</h2>
-        <p className="text-sm text-[#6B7280] text-center mb-8 max-w-sm">{errorMsg}</p>
+        <p className="text-sm text-[#6B7280] text-center mb-8 max-w-sm">{contextError || errorMsg}</p>
         <button
           onClick={handleOpenCamera}
           className="w-full max-w-sm px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold hover:bg-[#9678E8] transition-all glow-violet"

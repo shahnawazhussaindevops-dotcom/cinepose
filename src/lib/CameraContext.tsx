@@ -35,6 +35,10 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     try {
       stopCamera();
       const facingFront = useCameraStore.getState().facingFront;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera access requires HTTPS or localhost. If you are on a phone, please use a secure tunnel.');
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1920 },
@@ -52,11 +56,11 @@ export function CameraProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return true;
     } catch (err: any) {
-      const msg = err.name === 'NotAllowedError'
+      const msg = err.message || (err.name === 'NotAllowedError'
         ? 'Camera access denied. Please enable camera permissions in your browser settings.'
         : err.name === 'NotFoundError'
           ? 'No camera found on this device.'
-          : err.message || 'Camera access failed';
+          : 'Camera access failed');
       setError(msg);
       setLoading(false);
       return false;

@@ -86,7 +86,7 @@ function BoneCylinder({ start, end, color }: { start: [number, number, number]; 
   });
 
   return (
-    <mesh ref={ref} position={position} quaternion={quaternion}>
+    <mesh ref={ref} position={position} quaternion={quaternion} scale={scale}>
       <cylinderGeometry args={[1, 1, 1, 8]} />
       <meshStandardMaterial
         color={color}
@@ -95,7 +95,6 @@ function BoneCylinder({ start, end, color }: { start: [number, number, number]; 
         transparent
         opacity={0.6}
         wireframe={true}
-        scale={scale}
       />
     </mesh>
   );
@@ -129,7 +128,7 @@ function SkeletonInner({ pose, gender, animating }: SkeletonProps) {
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
-    groupRef.current.children.forEach(child => {
+    groupRef.current.children.forEach((child: THREE.Object3D) => {
       if (child.userData.jointName) {
         const target = targetPositions.current.get(child.userData.jointName);
         if (target) {
