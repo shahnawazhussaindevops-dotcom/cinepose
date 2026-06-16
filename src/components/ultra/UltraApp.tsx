@@ -64,8 +64,7 @@ function UltraAppInner() {
   const { currentLUT } = useLUTStore();
   const { showPoseMode, setShowPoseMode, showDroneMode, setShowDroneMode, showLUTPicker, setShowLUTPicker, settings } = useAppStore();
   const {
-    setActiveMode, setSceneParams, setPhotographerAnalysis,
-    setLocationAnalysis, setMoodResult, setMasterResult,
+    setActiveMode, setSceneAnalysis,
     sceneLuminance, sceneTemperature, isGoldenHour, isBacklit, tiltAngle,
   } = useUltraStore();
 
@@ -74,8 +73,7 @@ function UltraAppInner() {
   const [showPUNK, setShowPUNK] = useState(false);
   const [isScanning, setIsScanning] = useState(true);
   const [appReady, setAppReady] = useState(false);
-  const lightingRef = useRef(lighting);
-  lightingRef.current = lighting;
+  const lastAnalysisRef = useRef(0);
   const onScanCompleteRef = useRef(() => setIsScanning(false));
   onScanCompleteRef.current = () => setIsScanning(false);
   const handleScanComplete = useCallback(() => onScanCompleteRef.current(), []);
@@ -135,18 +133,22 @@ function UltraAppInner() {
 
   useEffect(() => {
     if (!lighting || !appReady) return;
+    const now = Date.now();
+    if (now - lastAnalysisRef.current < 1000) return;
+    lastAnalysisRef.current = now;
     const angle = detectCameraAngle();
     const isBacklitVal = lighting.condition === 'backlit';
     const isGoldenVal = lighting.condition === 'golden_hour';
     const tilt = angle === 'low_angle' ? 10 : angle === 'high_angle' ? 30 : angle === 'bird_eye' ? 45 : angle === 'overhead' ? 75 : 20;
 
-    setSceneParams(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, isBacklitVal, tilt);
-    setMoodResult(moodDetection.detect(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, isBacklitVal, tilt));
-    setLocationAnalysis(aiLocationIntel.analyze(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, tilt));
-    setPhotographerAnalysis(aiPhotographer.analyzeScene(lighting.averageLuminance, lighting.colorTemperature, true, true));
-    setMasterResult(masterSceneAnalyzer.analyze(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, isBacklitVal, tilt));
+    const mood = moodDetection.detect(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, isBacklitVal, tilt);
+    const location = aiLocationIntel.analyze(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, tilt);
+    const photo = aiPhotographer.analyzeScene(lighting.averageLuminance, lighting.colorTemperature, true, true);
+    const master = masterSceneAnalyzer.analyze(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, isBacklitVal, tilt);
+
+    setSceneAnalysis(lighting.averageLuminance, lighting.colorTemperature, isGoldenVal, isBacklitVal, tilt, mood, location, photo, master);
     setRecommendedPoses(lighting.condition === 'golden_hour' ? 'nature' : 'urban', angle, selectedGender);
-  }, [lighting, selectedGender, appReady, detectCameraAngle, setSceneParams, setMoodResult, setLocationAnalysis, setPhotographerAnalysis, setMasterResult, setRecommendedPoses]);
+  }, [lighting, selectedGender, appReady, detectCameraAngle, setSceneAnalysis, setRecommendedPoses]);
 
   const handleStartCamera = useCallback(async (): Promise<boolean> => {
     return await startCamera();

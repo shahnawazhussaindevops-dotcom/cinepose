@@ -36,6 +36,7 @@ interface UltraState {
   setReelPlan: (r: ReelPlan | null) => void;
   setCineGPTResponse: (c: CineGPTResponse | null) => void;
   setSceneParams: (luminance: number, temperature: number, golden: boolean, backlit: boolean, tilt: number) => void;
+  setSceneAnalysis: (luminance: number, temperature: number, golden: boolean, backlit: boolean, tilt: number, mood: MoodResult | null, location: LocationAnalysis | null, photo: PhotographerAnalysis | null, master: MasterSceneResult | null) => void;
   setLastLocationType: (l: LocationType) => void;
   setLastMoodType: (m: MoodType) => void;
   addChatMessage: (msg: { role: 'user' | 'ai'; message: string }) => void;
@@ -79,6 +80,12 @@ export const useUltraStore = create<UltraState>((set) => ({
   setSceneParams: (luminance, temperature, golden, backlit, tilt) => set({
     sceneLuminance: luminance, sceneTemperature: temperature,
     isGoldenHour: golden, isBacklit: backlit, tiltAngle: tilt,
+  }),
+  setSceneAnalysis: (luminance, temperature, golden, backlit, tilt, mood, location, photo, master) => set({
+    sceneLuminance: luminance, sceneTemperature: temperature,
+    isGoldenHour: golden, isBacklit: backlit, tiltAngle: tilt,
+    moodResult: mood, locationAnalysis: location,
+    photographerAnalysis: photo, masterResult: master,
   }),
   setLastLocationType: (l) => set({ lastLocationType: l }),
   setLastMoodType: (m) => set({ lastMoodType: m }),
