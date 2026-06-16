@@ -247,5 +247,4 @@ export function detachStreamFromVideo(video: HTMLVideoElement | null) {
   if (!video) return;
   video.pause();
   video.srcObject = null;
-  video.load();
 }

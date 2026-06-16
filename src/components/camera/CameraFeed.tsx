@@ -34,6 +34,15 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
   }, [error]);
 
   useEffect(() => {
+    if (isCameraReady) {
+      const video = videoRef.current;
+      if (video && video.paused && video.srcObject) {
+        video.play().catch(() => {});
+      }
+    }
+  }, [isCameraReady, videoRef]);
+
+  useEffect(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;

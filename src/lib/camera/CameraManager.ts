@@ -273,16 +273,24 @@ export class CameraManager {
   }
 
   private playVideo(video: HTMLVideoElement) {
-    video.play().catch((err) => {
-      log.warn('Video play() failed, will retry on next interaction:', err);
-      const resumeOnInteraction = () => {
-        video.play().catch(e => log.warn('Retry play() failed:', e));
-        document.removeEventListener('touchstart', resumeOnInteraction);
-        document.removeEventListener('click', resumeOnInteraction);
-      };
-      document.addEventListener('touchstart', resumeOnInteraction, { once: true });
-      document.addEventListener('click', resumeOnInteraction, { once: true });
-    });
+    const attemptPlay = () => {
+      video.play().catch((err) => {
+        log.warn('Video play() failed, will retry on next interaction:', err);
+        const resumeOnInteraction = () => {
+          video.play().catch(e => log.warn('Retry play() failed:', e));
+          document.removeEventListener('touchstart', resumeOnInteraction);
+          document.removeEventListener('click', resumeOnInteraction);
+        };
+        document.addEventListener('touchstart', resumeOnInteraction, { once: true });
+        document.addEventListener('click', resumeOnInteraction, { once: true });
+      });
+    };
+
+    if (video.readyState >= 2) {
+      attemptPlay();
+    } else {
+      video.addEventListener('loadedmetadata', attemptPlay, { once: true });
+    }
   }
 
   private async reconnectFromBackground() {
