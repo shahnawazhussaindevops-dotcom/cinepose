@@ -4,6 +4,7 @@ import { useCameraStore } from '../../stores/cameraStore';
 import { useLUTStore } from '../../stores/lutStore';
 import { createLUTProgram, setupLUTGeometry, applyLUT } from '../lut/LUTEngine';
 import { CameraDebugPanel } from './CameraDebugPanel';
+import { cameraManager } from '../../lib/camera/CameraManager';
 
 interface CameraFeedProps {
   onFrame?: (video: HTMLVideoElement) => void;
@@ -20,6 +21,12 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
   useEffect(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
+    
+    // Always ensure the manager knows about our current video element when we mount/remount
+    if (video) {
+      cameraManager.attachVideoElement(video);
+    }
+
     if (!video || !canvas || loading || error) return;
 
     // Try initializing WebGL2 context

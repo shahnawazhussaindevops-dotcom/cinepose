@@ -60,6 +60,7 @@ export class CameraManager {
     this.videoElement = video;
     if (this.stream && this.videoElement.srcObject !== this.stream) {
       this.videoElement.srcObject = this.stream;
+      this.videoElement.play().catch(e => console.warn('Play on attach failed:', e));
     }
   }
 
