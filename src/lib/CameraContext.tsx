@@ -53,6 +53,9 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (videoRef.current) {
       cameraManager.attachVideoElement(videoRef.current);
+      if (cameraManager.isActive()) {
+        setIsCameraReady(true);
+      }
     }
   });
 

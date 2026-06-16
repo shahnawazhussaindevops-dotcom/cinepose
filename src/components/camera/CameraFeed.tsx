@@ -38,8 +38,6 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    if (!isCameraReady) return;
-
     const gl = canvas.getContext('webgl2', {
       preserveDrawingBuffer: true,
       alpha: false,
@@ -118,7 +116,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
       }
       lutResourcesRef.current = { gl: null, program: null, positionBuffer: null, texCoordBuffer: null, texture: null };
     };
-  }, [onFrame, videoRef, canvasRef, isCameraReady, facingFront]);
+  }, [onFrame, videoRef, canvasRef, facingFront]);
 
   function setupLUTPipeline(gl: WebGL2RenderingContext, video: HTMLVideoElement, canvas: HTMLCanvasElement) {
     const program = createLUTProgram(gl);
