@@ -1,41 +1,62 @@
-export interface CameraDiagnostics {
-  status: 'idle' | 'starting' | 'active' | 'error';
-  errorName: string | null;
-  errorMessage: string | null;
-  currentDeviceLabel: string | null;
-  facingMode: 'user' | 'environment' | 'unknown';
-  resolution: { width: number; height: number } | null;
-  fps: number | null;
-}
+import type { CameraDiagnostics, CameraErrorInfo, CameraConfig, CameraFacingMode, CameraDeviceInfo, CameraStatus } from './types';
+import type { CameraEventCallback } from './types';
+import { log, getPlatformInfo } from './mediaUtils';
+import { checkCameraPermission } from './permissions';
+import {
+  createCameraStreamWithDeviceDiscovery,
+  stopMediaStream,
+  pauseMediaStream,
+  resumeMediaStream,
+  attachStreamToVideo,
+  detachStreamFromVideo,
+  getTrackInfo,
+} from './streamManager';
+import { enumerateCamerasWithFallback } from './cameraDevice';
 
-export type CameraEventCallback = (diagnostics: CameraDiagnostics) => void;
+const PREFERRED_CAMERA_KEY = 'cinepose_preferred_camera';
 
 export class CameraManager {
   private stream: MediaStream | null = null;
   private videoElement: HTMLVideoElement | null = null;
   private onDiagnosticsChange: CameraEventCallback | null = null;
   private isPausedByBackground = false;
+  private currentConfig: CameraConfig | null = null;
+  private currentDevice: CameraDeviceInfo | null = null;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 3;
+  private userInitiated = false;
 
   public diagnostics: CameraDiagnostics = {
     status: 'idle',
-    errorName: null,
-    errorMessage: null,
-    currentDeviceLabel: null,
+    error: null,
+    currentDevice: null,
     facingMode: 'unknown',
     resolution: null,
     fps: null,
+    devicesAvailable: 0,
+    streamActive: false,
+    permissionState: 'unknown',
   };
 
   constructor() {
     this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+    this.handleOrientationChange = this.handleOrientationChange.bind(this);
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('orientationchange', this.handleOrientationChange);
+      window.addEventListener('resize', this.handleOrientationChange);
     }
   }
 
   public destroy() {
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    }
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('orientationchange', this.handleOrientationChange);
+      window.removeEventListener('resize', this.handleOrientationChange);
     }
     this.stopCamera();
   }
@@ -59,142 +80,245 @@ export class CameraManager {
   public attachVideoElement(video: HTMLVideoElement) {
     this.videoElement = video;
     if (this.stream && this.videoElement.srcObject !== this.stream) {
-      this.videoElement.srcObject = this.stream;
-      this.videoElement.play().catch(e => console.warn('Play on attach failed:', e));
+      attachStreamToVideo(this.videoElement, this.stream).catch(e =>
+        log.warn('Stream attach to video failed:', e)
+      );
     }
   }
 
-  public async getDevices(): Promise<MediaDeviceInfo[]> {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
-      return [];
-    }
-    try {
-      return await navigator.mediaDevices.enumerateDevices();
-    } catch (e) {
-      console.warn('Failed to enumerate devices:', e);
-      return [];
-    }
+  public async checkPermissionState() {
+    this.updateDiagnostics({ status: 'checking-permission' });
+    const result = await checkCameraPermission();
+    this.updateDiagnostics({ permissionState: result.state });
+    return result;
+  }
+
+  public async getDevices(): Promise<CameraDeviceInfo[]> {
+    return await enumerateCamerasWithFallback();
   }
 
   public stopCamera() {
     if (this.stream) {
-      this.stream.getTracks().forEach((track) => track.stop());
+      stopMediaStream(this.stream);
       this.stream = null;
     }
     if (this.videoElement) {
-      this.videoElement.srcObject = null;
+      detachStreamFromVideo(this.videoElement);
     }
+    this.currentConfig = null;
+    this.currentDevice = null;
+    this.isPausedByBackground = false;
+    this.reconnectAttempts = 0;
     this.updateDiagnostics({
-      status: 'idle',
-      currentDeviceLabel: null,
+      status: 'stopped',
+      currentDevice: null,
       facingMode: 'unknown',
       resolution: null,
       fps: null,
+      streamActive: false,
+      error: null,
     });
   }
 
-  public async startCamera(preferredFacingMode: 'user' | 'environment'): Promise<boolean> {
+  public async startCamera(config?: CameraConfig): Promise<boolean> {
+    this.userInitiated = true;
+
+    const finalConfig: CameraConfig = config || {
+      preferredFacingMode: this.loadPreferredCamera() || 'environment',
+    };
+    this.currentConfig = finalConfig;
+
     this.stopCamera();
-    this.updateDiagnostics({ status: 'starting', errorName: null, errorMessage: null });
+    this.updateDiagnostics({
+      status: 'starting',
+      error: null,
+      permissionState: this.diagnostics.permissionState,
+    });
 
-    // 1. HTTPS / Secure Context Check
-    if (typeof window !== 'undefined') {
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        this.updateDiagnostics({
-          status: 'error',
-          errorName: 'SecurityError',
-          errorMessage: 'Camera access requires HTTPS.',
-        });
-        return false;
-      }
-    }
+    const permCheck = await checkCameraPermission();
+    this.updateDiagnostics({ permissionState: permCheck.state });
 
-    // 2. MediaDevices API Check
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (permCheck.error && permCheck.state === 'denied') {
       this.updateDiagnostics({
         status: 'error',
-        errorName: 'NotSupportedError',
-        errorMessage: 'Camera API not supported on this browser.',
+        error: permCheck.error,
       });
       return false;
     }
 
-    const fallbackSequence = [
-      { video: { facingMode: { ideal: preferredFacingMode }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false },
-      { video: { facingMode: { ideal: preferredFacingMode === 'user' ? 'environment' : 'user' } }, audio: false },
-      { video: true, audio: false }
-    ];
+    const result = await createCameraStreamWithDeviceDiscovery(finalConfig);
 
-    for (const constraints of fallbackSequence) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints as any);
-        this.stream = stream;
-        
-        if (this.videoElement) {
-          this.videoElement.srcObject = stream;
-          try {
-            await this.videoElement.play();
-          } catch (playErr) {
-            console.warn('Video play() interrupted:', playErr);
-          }
+    if (result.stream && result.device) {
+      this.stream = result.stream;
+      this.currentDevice = result.device;
+
+      if (this.videoElement) {
+        try {
+          await attachStreamToVideo(this.videoElement, result.stream);
+        } catch (attachErr) {
+          log.warn('Video attachment failed:', attachErr);
         }
-
-        const videoTrack = stream.getVideoTracks()[0];
-        const settings = videoTrack.getSettings();
-
-        this.updateDiagnostics({
-          status: 'active',
-          currentDeviceLabel: videoTrack.label || 'Unknown Camera',
-          facingMode: (settings.facingMode as any) || preferredFacingMode,
-          resolution: settings.width && settings.height ? { width: settings.width, height: settings.height } : null,
-          fps: settings.frameRate || null,
-        });
-
-        return true;
-      } catch (err: any) {
-        console.warn('Camera fallback attempt failed:', err.name, err.message);
-        // Continue to next fallback
       }
+
+      const track = result.stream.getVideoTracks()[0];
+      const trackInfo = getTrackInfo(track);
+
+      this.savePreferredCamera(trackInfo.facingMode);
+
+      const devices = await enumerateCamerasWithFallback();
+
+      this.updateDiagnostics({
+        status: 'active',
+        currentDevice: result.device,
+        facingMode: trackInfo.facingMode,
+        resolution: trackInfo.resolution,
+        fps: trackInfo.frameRate,
+        streamActive: true,
+        devicesAvailable: devices.length,
+        error: null,
+      });
+
+      log.info('Camera started successfully', {
+        facingMode: trackInfo.facingMode,
+        resolution: trackInfo.resolution,
+        device: result.device.label,
+      });
+
+      return true;
     }
 
-    // If all fallbacks fail, throw the last error gracefully
-    const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (result.error) {
+      this.updateDiagnostics({
+        status: 'error',
+        error: result.error,
+      });
+      return false;
+    }
+
     this.updateDiagnostics({
       status: 'error',
-      errorName: 'NotFoundError',
-      errorMessage: isMobile
-        ? 'Camera unavailable. On mobile Chrome: tap the 🔒 or ℹ️ icon in the address bar, enable Camera permission, then reload.'
-        : 'Could not start any camera on this device. Please check permissions.',
+      error: {
+        type: 'Unknown',
+        message: 'Failed to start camera for an unknown reason.',
+        originalError: null,
+        actionable: true,
+        suggestion: 'Please try again.',
+        retryable: true,
+      },
     });
     return false;
   }
 
-  public async switchCamera(): Promise<boolean> {
-    const nextMode = this.diagnostics.facingMode === 'environment' ? 'user' : 'environment';
-    return await this.startCamera(nextMode);
+  public async switchCamera(facingMode?: CameraFacingMode): Promise<boolean> {
+    const nextMode = facingMode ||
+      (this.diagnostics.facingMode === 'environment' ? 'user' : 'environment');
+
+    log.info(`Switching camera to: ${nextMode}`);
+    return await this.startCamera({
+      preferredFacingMode: nextMode,
+    });
   }
 
-  private handleVisibilityChange() {
-    if (document.visibilityState === 'hidden') {
-      if (this.diagnostics.status === 'active' && this.stream) {
-        this.stream.getVideoTracks().forEach(track => { track.enabled = false; });
-        this.isPausedByBackground = true;
-      }
-    } else if (document.visibilityState === 'visible') {
-      if (this.isPausedByBackground && this.stream) {
-        this.stream.getVideoTracks().forEach(track => { track.enabled = true; });
-        if (this.videoElement) {
-          this.videoElement.play().catch(e => console.warn('Resume play failed', e));
-        }
-        this.isPausedByBackground = false;
-      }
+  public async reconnectCamera(): Promise<boolean> {
+    if (!this.currentConfig) {
+      return this.startCamera();
     }
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      log.warn('Max reconnection attempts reached');
+      this.updateDiagnostics({
+        status: 'error',
+        error: {
+          type: 'CameraUnavailable',
+          message: 'Could not reconnect camera after multiple attempts.',
+          originalError: null,
+          actionable: true,
+          suggestion: 'Please try restarting the camera manually.',
+          retryable: true,
+        },
+      });
+      return false;
+    }
+
+    this.reconnectAttempts++;
+    log.info(`Reconnecting camera (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+
+    this.updateDiagnostics({ status: 'starting', error: null });
+
+    await new Promise(resolve => setTimeout(resolve, 300 * this.reconnectAttempts));
+
+    return await this.startCamera(this.currentConfig);
   }
 
   public getStream() {
     return this.stream;
   }
+
+  public getCurrentDevice() {
+    return this.currentDevice;
+  }
+
+  public isActive(): boolean {
+    return this.diagnostics.status === 'active';
+  }
+
+  private handleVisibilityChange() {
+    if (typeof document === 'undefined') return;
+
+    if (document.visibilityState === 'hidden') {
+      if (this.diagnostics.status === 'active' && this.stream) {
+        log.info('App went to background, pausing camera');
+        pauseMediaStream(this.stream);
+        this.isPausedByBackground = true;
+      }
+    } else if (document.visibilityState === 'visible') {
+      if (this.isPausedByBackground) {
+        this.isPausedByBackground = false;
+        if (this.stream) {
+          log.info('App returned to foreground, resuming camera');
+          resumeMediaStream(this.stream);
+          if (this.videoElement) {
+            this.videoElement.play().catch(e => log.warn('Resume video play failed:', e));
+          }
+        } else if (this.userInitiated && this.currentConfig) {
+          log.info('Stream lost while in background, reconnecting...');
+          this.reconnectCamera();
+        }
+      }
+    }
+  }
+
+  private handleOrientationChange() {
+    if (this.videoElement && this.stream) {
+      const platform = getPlatformInfo();
+      if (platform.isMobile) {
+        setTimeout(() => {
+          this.videoElement?.play().catch(() => {});
+        }, 300);
+      }
+    }
+  }
+
+  private loadPreferredCamera(): CameraFacingMode | null {
+    if (typeof localStorage === 'undefined') return null;
+    try {
+      const saved = localStorage.getItem(PREFERRED_CAMERA_KEY);
+      if (saved === 'user' || saved === 'environment') return saved;
+    } catch {
+      // localStorage unavailable
+    }
+    return null;
+  }
+
+  private savePreferredCamera(facingMode: CameraFacingMode) {
+    if (typeof localStorage === 'undefined') return;
+    if (facingMode === 'unknown') return;
+    try {
+      localStorage.setItem(PREFERRED_CAMERA_KEY, facingMode);
+    } catch {
+      // localStorage unavailable
+    }
+  }
 }
 
-// Singleton instance
 export const cameraManager = new CameraManager();

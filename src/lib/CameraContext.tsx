@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useCallback, useEff
 import { useCameraStore } from '../stores/cameraStore';
 import { useLUTStore } from '../stores/lutStore';
 import { cameraManager } from './camera/CameraManager';
+import { log } from './camera/mediaUtils';
 
 interface CameraContextValue {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -13,6 +14,10 @@ interface CameraContextValue {
   captureFrame: () => ImageData | null;
   capturePhoto: () => Promise<string | null>;
   takePhoto: () => Promise<string | null>;
+  switchCamera: () => Promise<boolean>;
+  reconnectCamera: () => Promise<boolean>;
+  isCameraReady: boolean;
+  debugError: unknown;
 }
 
 const CameraContext = createContext<CameraContextValue | null>(null);
@@ -22,26 +27,34 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugError, setDebugError] = useState<unknown>(null);
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const initAttemptedRef = useRef(false);
 
   useEffect(() => {
-    // Fallback: poll briefly to ensure videoRef gets attached if it's rendered late
-    const interval = setInterval(() => {
-      if (videoRef.current) {
-        cameraManager.attachVideoElement(videoRef.current);
-        clearInterval(interval);
-      }
-    }, 200);
-    
     cameraManager.setDiagnosticsCallback((d) => {
-      setLoading(d.status === 'starting');
-      setError(d.status === 'error' ? d.errorMessage : null);
+      setLoading(d.status === 'starting' || d.status === 'checking-permission');
+      setError(d.status === 'error' ? d.error?.message || null : null);
+      setIsCameraReady(d.status === 'active');
+      if (d.status === 'error') {
+        setDebugError(d.error);
+      }
     });
-    
+
+    if (videoRef.current) {
+      cameraManager.attachVideoElement(videoRef.current);
+    }
+
     return () => {
-      clearInterval(interval);
       cameraManager.destroy();
     };
   }, []);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      cameraManager.attachVideoElement(videoRef.current);
+    }
+  });
 
   const stopCamera = useCallback(() => {
     cameraManager.stopCamera();
@@ -52,7 +65,19 @@ export function CameraProvider({ children }: { children: ReactNode }) {
       cameraManager.attachVideoElement(videoRef.current);
     }
     const facingFront = useCameraStore.getState().facingFront;
-    return await cameraManager.startCamera(facingFront ? 'user' : 'environment');
+    const success = await cameraManager.startCamera({
+      preferredFacingMode: facingFront ? 'user' : 'environment',
+    });
+    initAttemptedRef.current = true;
+    return success;
+  }, []);
+
+  const switchCamera = useCallback(async (): Promise<boolean> => {
+    return await cameraManager.switchCamera();
+  }, []);
+
+  const reconnectCamera = useCallback(async (): Promise<boolean> => {
+    return await cameraManager.reconnectCamera();
   }, []);
 
   const captureFrame = useCallback((): ImageData | null => {
@@ -86,14 +111,14 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     if (!videoRef.current || !canvasRef.current) return null;
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (gl) {
       return await canvasToDataURL(canvas);
     }
 
-    canvas.width = video.videoWidth || 1920;
-    canvas.height = video.videoHeight || 1080;
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.drawImage(video, 0, 0);
@@ -110,10 +135,11 @@ export function CameraProvider({ children }: { children: ReactNode }) {
         thumbnail: photoDataUrl,
         lut: currentLutId,
         date: Date.now(),
-        width: videoRef.current?.videoWidth || 1080,
-        height: videoRef.current?.videoHeight || 1920,
+        width: videoRef.current?.videoWidth || 1280,
+        height: videoRef.current?.videoHeight || 720,
       };
       useCameraStore.getState().addPhoto(photo);
+      log.info('Photo captured', { id: photo.id });
     }
     return photoDataUrl;
   }, [capturePhoto]);
@@ -122,6 +148,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     <CameraContext.Provider value={{
       videoRef, canvasRef, loading, error,
       startCamera, stopCamera, captureFrame, capturePhoto, takePhoto,
+      switchCamera, reconnectCamera, isCameraReady, debugError,
     }}>
       {children}
     </CameraContext.Provider>
