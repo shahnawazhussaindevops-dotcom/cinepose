@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useRef, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useEffect, type ReactNode } from 'react';
 import { useCameraStore } from '../stores/cameraStore';
 import { useLUTStore } from '../stores/lutStore';
+import { cameraManager } from './camera/CameraManager';
 
 interface CameraContextValue {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  streamRef: React.MutableRefObject<MediaStream | null>;
   loading: boolean;
   error: string | null;
   startCamera: () => Promise<boolean>;
@@ -20,52 +20,32 @@ const CameraContext = createContext<CameraContextValue | null>(null);
 export function CameraProvider({ children }: { children: ReactNode }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Bind video ref to manager
+    if (videoRef.current) {
+      cameraManager.attachVideoElement(videoRef.current);
+    }
+  }, [videoRef]);
+
+  useEffect(() => {
+    cameraManager.setDiagnosticsCallback((d) => {
+      setLoading(d.status === 'starting');
+      setError(d.status === 'error' ? d.errorMessage : null);
+    });
+    return () => cameraManager.destroy();
+  }, []);
+
   const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
+    cameraManager.stopCamera();
   }, []);
 
   const startCamera = useCallback(async (): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
-    try {
-      stopCamera();
-      const facingFront = useCameraStore.getState().facingFront;
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera access requires HTTPS or localhost. If you are on a phone, please use a secure tunnel.');
-      }
-      
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          facingMode: facingFront ? { ideal: 'user' } : { ideal: 'environment' },
-          frameRate: { ideal: 30 },
-        },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
-      setLoading(false);
-      return true;
-    } catch (err: any) {
-      const msg = err.message || (err.name === 'NotAllowedError'
-        ? 'Camera access denied. Please enable camera permissions in your browser settings.'
-        : err.name === 'NotFoundError'
-          ? 'No camera found on this device.'
-          : 'Camera access failed');
-      setError(msg);
-      setLoading(false);
-      return false;
-    }
-  }, [stopCamera]);
+    const facingFront = useCameraStore.getState().facingFront;
+    return await cameraManager.startCamera(facingFront ? 'user' : 'environment');
+  }, []);
 
   const captureFrame = useCallback((): ImageData | null => {
     if (!videoRef.current || !canvasRef.current) return null;
@@ -84,7 +64,6 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
-    // Check if the canvas has already been initialized with WebGL
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (gl) {
       return canvas.toDataURL('image/jpeg', 0.95);
@@ -118,7 +97,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
 
   return (
     <CameraContext.Provider value={{
-      videoRef, canvasRef, streamRef, loading, error,
+      videoRef, canvasRef, loading, error,
       startCamera, stopCamera, captureFrame, capturePhoto, takePhoto,
     }}>
       {children}

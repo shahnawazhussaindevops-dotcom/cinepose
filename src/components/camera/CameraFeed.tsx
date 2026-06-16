@@ -3,6 +3,7 @@ import { useCameraContext } from '../../lib/CameraContext';
 import { useCameraStore } from '../../stores/cameraStore';
 import { useLUTStore } from '../../stores/lutStore';
 import { createLUTProgram, setupLUTGeometry, applyLUT } from '../lut/LUTEngine';
+import { CameraDebugPanel } from './CameraDebugPanel';
 
 interface CameraFeedProps {
   onFrame?: (video: HTMLVideoElement) => void;
@@ -161,9 +162,9 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
       {/* Render raw video in offscreen/hidden state if WebGL works, otherwise show it normally */}
       <video
         ref={videoRef}
-        autoPlay
-        playsInline
-        muted
+        autoPlay={true}
+        playsInline={true}
+        muted={true}
         className={
           webglSupported
             ? 'absolute top-0 left-0 w-full h-full opacity-[0.01] pointer-events-none -z-10 object-cover'
@@ -185,6 +186,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         <div className="absolute inset-0 pointer-events-none border border-[#A78BFA]/5" />
       )}
 
+      <CameraDebugPanel />
       {children}
     </div>
   );
