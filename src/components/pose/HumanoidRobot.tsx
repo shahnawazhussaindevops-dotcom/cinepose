@@ -5,9 +5,9 @@ import type { Pose, JointPosition, Gender, HumanoidConfig } from '../../lib/type
 import { BONES } from './PoseLibrary';
 
 const DEFAULT_CONFIG: Record<Gender, HumanoidConfig> = {
-  male: { gender: 'male', shoulderWidth: 1.5, hipWidth: 1.0, scale: 1, color: '#A78BFA', emissive: '#6EE7B7', opacity: 0.7 },
-  female: { gender: 'female', shoulderWidth: 1.1, hipWidth: 1.0, scale: 1, color: '#A78BFA', emissive: '#6EE7B7', opacity: 0.7 },
-  neutral: { gender: 'neutral', shoulderWidth: 1.3, hipWidth: 1.0, scale: 1, color: '#A78BFA', emissive: '#6EE7B7', opacity: 0.7 },
+  male: { gender: 'male', shoulderWidth: 1.5, hipWidth: 1.0, scale: 1, color: '#06B6D4', emissive: '#22D3EE', opacity: 0.6 },
+  female: { gender: 'female', shoulderWidth: 1.1, hipWidth: 1.0, scale: 1, color: '#06B6D4', emissive: '#22D3EE', opacity: 0.6 },
+  neutral: { gender: 'neutral', shoulderWidth: 1.3, hipWidth: 1.0, scale: 1, color: '#06B6D4', emissive: '#22D3EE', opacity: 0.6 },
 };
 
 interface SkeletonProps {
@@ -38,20 +38,21 @@ function JointSphere({ position, color, emissive }: { position: [number, number,
 
   useFrame((state) => {
     if (meshRef.current) {
-      const pulse = 0.7 + 0.3 * Math.sin(state.clock.elapsedTime * 2 + position[1]);
+      const pulse = 0.7 + 0.3 * Math.sin(state.clock.elapsedTime * 3 + position[1]);
       meshRef.current.material.opacity = pulse;
     }
   });
 
   return (
     <mesh ref={meshRef} position={position}>
-      <sphereGeometry args={[0.03, 16, 16]} />
+      <sphereGeometry args={[0.035, 16, 16]} />
       <meshStandardMaterial
         color={color}
         emissive={emissive}
-        emissiveIntensity={0.5}
+        emissiveIntensity={2.5}
         transparent
-        opacity={0.8}
+        opacity={0.9}
+        wireframe={true}
       />
     </mesh>
   );
@@ -79,7 +80,7 @@ function BoneCylinder({ start, end, color }: { start: [number, number, number]; 
 
   useFrame((state) => {
     if (ref.current) {
-      const glow = 0.4 + 0.3 * Math.sin(state.clock.elapsedTime * 1.5 + position[1]);
+      const glow = 1.0 + 0.5 * Math.sin(state.clock.elapsedTime * 2 + position[1]);
       (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity = glow;
     }
   });
@@ -90,9 +91,10 @@ function BoneCylinder({ start, end, color }: { start: [number, number, number]; 
       <meshStandardMaterial
         color={color}
         emissive={color}
-        emissiveIntensity={0.4}
+        emissiveIntensity={1.5}
         transparent
-        opacity={0.5}
+        opacity={0.6}
+        wireframe={true}
         scale={scale}
       />
     </mesh>
@@ -104,7 +106,7 @@ function GroundGlow({ gender }: { gender: Gender }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.4, 0]}>
       <ringGeometry args={[0.05, 0.2, 32]} />
-      <meshBasicMaterial color="#A78BFA" transparent opacity={0.15} side={THREE.DoubleSide} />
+      <meshBasicMaterial color={config.color} transparent opacity={0.15} side={THREE.DoubleSide} />
     </mesh>
   );
 }
@@ -153,6 +155,8 @@ function SkeletonInner({ pose, gender, animating }: SkeletonProps) {
     return map;
   }, [pose]);
 
+  const config = DEFAULT_CONFIG[gender];
+
   return (
     <group ref={groupRef}>
       <GroundGlow gender={gender} />
@@ -160,14 +164,14 @@ function SkeletonInner({ pose, gender, animating }: SkeletonProps) {
         const start = jointPositions.get(bone.start);
         const end = jointPositions.get(bone.end);
         if (!start || !end) return null;
-        return <BoneCylinder key={`bone-${i}`} start={start} end={end} color="#6EE7B7" />;
+        return <BoneCylinder key={`bone-${i}`} start={start} end={end} color={config.emissive} />;
       })}
       {pose.joints.map((joint, i) => (
         <group key={`joint-${i}`} userData={{ jointName: joint.name }}>
           <JointSphere
             position={getJointPosition(pose, joint.name)}
-            color="#A78BFA"
-            emissive="#6EE7B7"
+            color={config.color}
+            emissive={config.emissive}
           />
         </group>
       ))}
@@ -205,9 +209,9 @@ export function HumanoidRobot({ pose, gender, animating = true, className = '' }
         style={{ background: 'transparent' }}
       >
         <SceneSetup gender={gender} />
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[1, 2, 1]} intensity={0.5} color="#A78BFA" />
-        <directionalLight position={[-1, 1, -1]} intensity={0.2} color="#6EE7B7" />
+        <ambientLight intensity={0.5} />
+        <directionalLight position={[1, 2, 1]} intensity={0.8} color="#22D3EE" />
+        <directionalLight position={[-1, 1, -1]} intensity={0.4} color="#06B6D4" />
         <SkeletonInner pose={pose} gender={gender} animating={animating} />
       </Canvas>
     </div>
