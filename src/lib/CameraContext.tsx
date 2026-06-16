@@ -39,7 +39,7 @@ export function CameraProvider({ children }: { children: ReactNode }) {
         video: {
           width: { ideal: 1920 },
           height: { ideal: 1080 },
-          facingMode: facingFront ? 'user' : 'environment',
+          facingMode: facingFront ? { ideal: 'user' } : { ideal: 'environment' },
           frameRate: { ideal: 30 },
         },
         audio: false,
