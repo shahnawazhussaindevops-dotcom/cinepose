@@ -277,12 +277,63 @@ export class CameraManager {
     return this.diagnostics.status === 'active';
   }
 
+  private async reconnectFromBackground() {
+    if (!this.currentConfig) {
+      this.isPausedByBackground = false;
+      return;
+    }
+
+    log.info('Reconnecting camera after background (preserving video element)');
+    const result = await createCameraStreamWithDeviceDiscovery(this.currentConfig);
+
+    if (result.stream && result.device) {
+      this.stream = result.stream;
+      this.currentDevice = result.device;
+
+      if (this.videoElement) {
+        this.videoElement.srcObject = result.stream;
+      }
+
+      const track = result.stream.getVideoTracks()[0];
+      const trackInfo = getTrackInfo(track);
+      this.savePreferredCamera(trackInfo.facingMode);
+
+      const devices = await enumerateCamerasWithFallback();
+      this.updateDiagnostics({
+        status: 'active',
+        currentDevice: result.device,
+        facingMode: trackInfo.facingMode,
+        resolution: trackInfo.resolution,
+        fps: trackInfo.frameRate,
+        streamActive: true,
+        devicesAvailable: devices.length,
+        error: null,
+      });
+
+      log.info('Camera reconnected successfully after background');
+    } else {
+      const errMsg = result.error?.message || 'Reconnection failed';
+      log.warn('Camera reconnection failed:', errMsg);
+      this.updateDiagnostics({
+        status: 'error',
+        error: result.error || {
+          type: 'Unknown',
+          message: errMsg,
+          originalError: null,
+          actionable: true,
+          suggestion: 'Please tap Try Again to restart the camera.',
+          retryable: true,
+        },
+      });
+    }
+  }
+
   private handleVisibilityChange() {
     if (typeof document === 'undefined') return;
 
     if (document.visibilityState === 'hidden') {
       if (this.diagnostics.status === 'active' && this.stream) {
-        log.info('App went to background, fully stopping camera');
+        log.info('App went to background, stopping camera tracks');
         stopMediaStream(this.stream);
         this.stream = null;
         this.isPausedByBackground = true;
@@ -295,7 +346,7 @@ export class CameraManager {
       if (this.isPausedByBackground) {
         this.isPausedByBackground = false;
         log.info('App returned to foreground, reconnecting camera');
-        this.reconnectCamera();
+        this.reconnectFromBackground();
       }
     }
   }
@@ -305,7 +356,6 @@ export class CameraManager {
       log.info('Page hiding, stopping camera tracks');
       stopMediaStream(this.stream);
       this.stream = null;
-      this.isPausedByBackground = false;
       this.updateDiagnostics({ status: 'stopped', streamActive: false });
     }
   }

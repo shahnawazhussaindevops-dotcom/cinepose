@@ -244,7 +244,7 @@ export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream
 
   if (video.paused) {
     return video.play().catch((err) => {
-      log.warn('Video play() failed:', err);
+      log.warn('Video play() failed (expected on mobile without gesture):', err);
     });
   }
 

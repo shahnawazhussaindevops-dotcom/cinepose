@@ -158,7 +158,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         </div>
       )}
 
-      {showError && !loading && (
+      {showError && !loading && !isCameraReady && (
         <CameraErrorOverlay
           error={showError}
           onRetry={() => {
