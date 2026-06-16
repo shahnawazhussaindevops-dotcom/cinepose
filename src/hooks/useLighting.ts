@@ -11,7 +11,7 @@ export function useLighting() {
   const { setCurrentLighting } = useCameraStore();
 
   const analyzeFromVideo = useCallback((video: HTMLVideoElement) => {
-    if (!video || video.readyState < 2) return;
+    if (!video || video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) return;
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');

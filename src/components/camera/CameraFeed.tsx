@@ -65,7 +65,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
     const render = () => {
-      if (video.readyState >= 2) {
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
         // Match canvas dimensions to video
         if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
           canvas.width = video.videoWidth;
