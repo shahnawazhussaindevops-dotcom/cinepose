@@ -27,7 +27,10 @@ export function AIDirectorMode({ instructions, currentStep, onNextStep, onPrevSt
 
   if (!active || instructions.length === 0) return null;
 
-  const current = instructions[currentStep];
+  const safeStep = Math.min(currentStep, instructions.length - 1);
+  const current = instructions[safeStep];
+
+  if (!current) return null;
 
   const instructionIcons: Record<string, string> = {
     turn: '↻', look: '👁', step: '🦶', relax: '◌', move: '✋',

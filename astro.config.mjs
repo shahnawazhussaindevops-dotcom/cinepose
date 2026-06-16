@@ -20,14 +20,17 @@ export default defineConfig({
     host: true,
   },
   vite: {
-    plugins: [tailwindcss(), basicSsl()],
+    plugins: [tailwindcss()],
     ssr: {
-      noExternal: ['@react-three/fiber', '@react-three/drei', 'three', 'framer-motion', 'zustand'],
+      noExternal: ['@react-three/fiber', '@react-three/drei', 'three', 'framer-motion', 'zustand', 'lucide-react'],
     },
     server: {
       watch: {
         ignored: ['**/dist/**', '**/.vercel/**'],
       },
+    },
+    build: {
+      cssMinify: 'esbuild',
     },
   },
 });

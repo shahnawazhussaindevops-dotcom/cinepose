@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { t } from '../../lib/i18n';
 import { GlassCard } from '../ui/GlassCard';
 
 type DroneMode = 'frame_overlay' | 'cinematic_guide';
@@ -10,9 +9,9 @@ interface DroneGuideProps {
 }
 
 const movementPatterns = [
-  { id: 'spiral', label: 'drone.spiral_out', icon: '🌀', duration: 8 },
-  { id: 'flyover', label: 'drone.fly_over', icon: '✈', duration: 6 },
-  { id: 'topdown', label: 'drone.top_down', icon: '⬇', duration: 5 },
+  { id: 'spiral', label: 'Spiral Out', icon: '🌀', duration: 8 },
+  { id: 'flyover', label: 'Fly Over', icon: '✈', duration: 6 },
+  { id: 'topdown', label: 'Top Down', icon: '⬇', duration: 5 },
 ];
 
 export function DroneGuide({ active, onClose }: DroneGuideProps) {
@@ -24,31 +23,25 @@ export function DroneGuide({ active, onClose }: DroneGuideProps) {
 
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
-      {/* Drone Grid Overlay */}
       <div className="absolute inset-0 pointer-events-none">
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-          {/* Horizon lines */}
           <line x1="0" y1="50" x2="100" y2="50" stroke="#6EE7B7" strokeWidth="0.3" opacity="0.4" />
           <line x1="0" y1="30" x2="100" y2="30" stroke="#6EE7B7" strokeWidth="0.2" opacity="0.2" />
           <line x1="0" y1="70" x2="100" y2="70" stroke="#6EE7B7" strokeWidth="0.2" opacity="0.2" />
-          {/* Center cross */}
           <line x1="50" y1="0" x2="50" y2="100" stroke="#6EE7B7" strokeWidth="0.3" opacity="0.4" />
-          {/* Compass rose */}
           <text x="50" y="8" textAnchor="middle" fill="#6EE7B7" fontSize="3" opacity="0.6">N</text>
           <text x="92" y="52" textAnchor="middle" fill="#6EE7B7" fontSize="3" opacity="0.6">E</text>
           <text x="50" y="96" textAnchor="middle" fill="#6EE7B7" fontSize="3" opacity="0.6">S</text>
           <text x="8" y="52" textAnchor="middle" fill="#6EE7B7" fontSize="3" opacity="0.6">W</text>
-          {/* Grid sectors */}
           <rect x="25" y="25" width="50" height="50" fill="none" stroke="#6EE7B7" strokeWidth="0.15" opacity="0.15" strokeDasharray="2,2" />
         </svg>
       </div>
 
-      {/* Drone Controls overlay */}
       <div className="absolute bottom-24 left-4 right-4 pointer-events-auto">
         <GlassCard padding="p-4">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[#6EE7B7]">{t('drone.title')}</h3>
+              <h3 className="text-sm font-semibold text-[#6EE7B7]">Drone Guide</h3>
               <div className="flex gap-1.5">
                 <button
                   onClick={() => setMode('frame_overlay')}
@@ -58,7 +51,7 @@ export function DroneGuide({ active, onClose }: DroneGuideProps) {
                       : 'bg-white/5 text-[#6B7280]'
                   }`}
                 >
-                  {t('drone.frame_overlay')}
+                  Frame Overlay
                 </button>
                 <button
                   onClick={() => setMode('cinematic_guide')}
@@ -68,7 +61,7 @@ export function DroneGuide({ active, onClose }: DroneGuideProps) {
                       : 'bg-white/5 text-[#6B7280]'
                   }`}
                 >
-                  {t('drone.cinematic_guide')}
+                  Cinematic Guide
                 </button>
               </div>
             </div>
@@ -86,7 +79,7 @@ export function DroneGuide({ active, onClose }: DroneGuideProps) {
                     }`}
                   >
                     <span className="text-lg">{pattern.icon}</span>
-                    <span className="text-[9px] text-white/70 text-center">{t(pattern.label)}</span>
+                    <span className="text-[9px] text-white/70 text-center">{pattern.label}</span>
                     <span className="text-[8px] text-white/40">{pattern.duration}s</span>
                   </button>
                 ))}
@@ -96,9 +89,9 @@ export function DroneGuide({ active, onClose }: DroneGuideProps) {
             {mode === 'cinematic_guide' && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/70">{t('drone.keyframes')}: {keyframes}/5</span>
+                  <span className="text-xs text-white/70">Keyframes: {keyframes}/5</span>
                   {keyframes > 0 && (
-                    <span className="text-[10px] text-[#6EE7B7]">✓ {t('drone.preview_reel')}</span>
+                    <span className="text-[10px] text-[#6EE7B7]">✓ Preview Reel</span>
                   )}
                 </div>
                 <div className="flex gap-1">
@@ -115,7 +108,7 @@ export function DroneGuide({ active, onClose }: DroneGuideProps) {
                   onClick={() => setKeyframes(Math.min(keyframes + 1, 5))}
                   className="w-full py-2 rounded-xl bg-[#6EE7B7]/20 text-[#6EE7B7] text-xs font-medium hover:bg-[#6EE7B7]/30 transition-colors"
                 >
-                  {t('drone.start_capture')}
+                  Start Capture
                 </button>
               </div>
             )}
@@ -124,7 +117,7 @@ export function DroneGuide({ active, onClose }: DroneGuideProps) {
               onClick={onClose}
               className="w-full text-center text-[10px] text-white/40 hover:text-white/70 transition-colors"
             >
-              {t('common.close')}
+              Close
             </button>
           </div>
         </GlassCard>

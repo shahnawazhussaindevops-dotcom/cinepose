@@ -37,9 +37,14 @@ function JointSphere({ position, color, emissive }: { position: [number, number,
   const meshRef = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
-    if (meshRef.current) {
+    if (meshRef.current && meshRef.current.material) {
       const pulse = 0.7 + 0.3 * Math.sin(state.clock.elapsedTime * 3 + position[1]);
-      (meshRef.current.material as THREE.Material).opacity = pulse;
+      const mat = meshRef.current.material;
+      if (Array.isArray(mat)) {
+        mat.forEach(m => (m as THREE.Material).opacity = pulse);
+      } else {
+        (mat as THREE.Material).opacity = pulse;
+      }
     }
   });
 
@@ -69,19 +74,30 @@ function BoneCylinder({ start, end, color }: { start: [number, number, number]; 
     const length = direction.length();
 
     const up = new THREE.Vector3(0, 1, 0);
-    const quat = new THREE.Quaternion().setFromUnitVectors(up, direction.clone().normalize());
+    const dirNorm = direction.clone();
+    if (length > 0.0001) {
+      dirNorm.normalize();
+    } else {
+      dirNorm.set(0, 1, 0);
+    }
+    const quat = new THREE.Quaternion().setFromUnitVectors(up, dirNorm);
 
     return [
-      [mid.x, mid.y, mid.z] as [number, number, number],
+      [mid.x || 0, mid.y || 0, mid.z || 0] as [number, number, number],
       quat,
-      [0.015, length, 0.015] as [number, number, number],
+      [0.015, Math.max(0.001, length), 0.015] as [number, number, number],
     ];
   }, [start, end]);
 
   useFrame((state) => {
-    if (ref.current) {
+    if (ref.current && ref.current.material) {
       const glow = 1.0 + 0.5 * Math.sin(state.clock.elapsedTime * 2 + position[1]);
-      (ref.current.material as THREE.MeshStandardMaterial).emissiveIntensity = glow;
+      const mat = ref.current.material;
+      if (Array.isArray(mat)) {
+        mat.forEach(m => (m as THREE.MeshStandardMaterial).emissiveIntensity = glow);
+      } else {
+        (mat as THREE.MeshStandardMaterial).emissiveIntensity = glow;
+      }
     }
   });
 

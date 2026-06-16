@@ -15,3 +15,12 @@ interface ImportMeta {
 declare namespace DeviceOrientationEvent {
   function requestPermission(): Promise<'granted' | 'denied'>;
 }
+
+declare module '*.astro' {
+  export default any;
+}
+
+declare module '*.module.css' {
+  const classes: { readonly [key: string]: string };
+  export default classes;
+}

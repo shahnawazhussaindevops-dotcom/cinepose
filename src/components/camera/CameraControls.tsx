@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import { useCameraStore } from '../../stores/cameraStore';
 import { useAppStore } from '../../stores/appStore';
 import { ShutterButton } from './ShutterButton';
-import { PillButton } from '../ui/PillButton';
-import { t } from '../../lib/i18n';
 
 interface CameraControlsProps {
   onCapture: () => void;
@@ -36,7 +34,7 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
 
             <button
               className="p-2 rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
-              title={t('camera.timer')}
+              title="Timer"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
@@ -48,7 +46,7 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
               className={`p-2 rounded-full backdrop-blur-md transition-colors ${
                 settings.gridOverlay !== 'off' ? 'bg-[#A78BFA]/30 text-[#A78BFA]' : 'bg-white/10 text-white/70'
               }`}
-              title={t('camera.grid')}
+              title="Grid"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="7" height="7" />
@@ -61,7 +59,7 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
 
           <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md">
             <span className="text-xs text-[#FB923C]">✦</span>
-            <span className="text-xs text-[#F9FAFB] font-medium">{t('camera.golden_hour')}</span>
+            <span className="text-xs text-[#F9FAFB] font-medium">Golden Hour</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -83,7 +81,7 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
               className={`p-2 rounded-full backdrop-blur-md transition-colors ${
                 showDroneMode ? 'bg-[#6EE7B7]/30 text-[#6EE7B7]' : 'bg-white/10 text-white/70'
               }`}
-              title={t('camera.drone_mode')}
+              title="Drone View"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 2L2 9l10 7 10-7-10-7z" />
@@ -94,7 +92,7 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
             <button
               onClick={toggleCamera}
               className="p-2 rounded-full bg-white/10 text-white/70 hover:bg-white/20 transition-colors"
-              title={t('camera.flip')}
+              title="Flip Camera"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
@@ -109,21 +107,18 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
       <div className="absolute bottom-0 left-0 right-0 z-10">
         <div className="px-6 pb-8 pt-4 bg-gradient-to-t from-black/60 to-transparent">
           <div className="flex items-end justify-between">
-            {/* LUT Picker Trigger */}
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={onOpenLUT}
                 className="px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 transition-colors"
               >
-                <span className="text-xs text-[#F9FAFB] font-medium">{t('camera.lut_picker')}</span>
+                <span className="text-xs text-[#F9FAFB] font-medium">LUT</span>
               </button>
               <div className="w-6 h-0.5 rounded-full bg-[#A78BFA]/50" />
             </div>
 
-            {/* Shutter */}
             <ShutterButton onCapture={onCapture} />
 
-            {/* Pose Mode Toggle */}
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={onTogglePose}
@@ -132,7 +127,7 @@ export function CameraControls({ onCapture, onTogglePose, onToggleDrone, onOpenL
                     ? 'bg-[#A78BFA]/30 border-[#A78BFA] shadow-[0_0_15px_rgba(167,139,250,0.3)]'
                     : 'bg-white/10 border-white/10 hover:bg-white/20'
                 }`}
-                title={t('camera.pose_mode')}
+                title="Pose Guide"
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={showPoseMode ? 'text-[#A78BFA]' : 'text-white/70'}>
                   <circle cx="12" cy="5" r="3" />

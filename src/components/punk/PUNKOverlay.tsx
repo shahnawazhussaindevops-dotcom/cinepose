@@ -30,37 +30,66 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
 
   const sceneContext = useMemo(() => {
     if (!currentLighting) return null;
-    return sceneEngine.analyzeScene(
-      currentLighting.averageLuminance,
-      currentLighting.colorTemperature,
-      0, 0, false, false,
-      currentLighting.shadowClip,
-      currentLighting.highlightClip
-    );
+    try {
+      return sceneEngine.analyzeScene(
+        currentLighting.averageLuminance || 0,
+        currentLighting.colorTemperature || 5500,
+        0, 0, false, false,
+        currentLighting.shadowClip || 0,
+        currentLighting.highlightClip || 0
+      );
+    } catch (e) {
+      console.warn("PUNK AI scene analysis failed", e);
+      return null;
+    }
   }, [currentLighting]);
 
   const topPoses: PoseScore[] = useMemo(() => {
     if (!sceneContext) return [];
-    return poseScoring.getTopPoses(sceneContext, selectedStyle, 5);
+    try {
+      return poseScoring.getTopPoses(sceneContext, selectedStyle, 5);
+    } catch (e) {
+      console.warn("PUNK AI pose scoring failed", e);
+      return [];
+    }
   }, [sceneContext, selectedStyle]);
 
   const directorInstructions: DirectorInstruction[] = useMemo(() => {
-    if (topPoses.length === 0) return [];
-    return aiDirector.generateInstructions(topPoses[0], sceneContext!);
+    if (topPoses.length === 0 || !sceneContext) return [];
+    try {
+      return aiDirector.generateInstructions(topPoses[0], sceneContext);
+    } catch (e) {
+      console.warn("PUNK AI director failed", e);
+      return [];
+    }
   }, [topPoses, sceneContext]);
 
   const trends: TrendData[] = useMemo(() => {
     if (!sceneContext) return [];
-    return trendEngine.getTrendsForScene(sceneContext);
+    try {
+      return trendEngine.getTrendsForScene(sceneContext);
+    } catch (e) {
+      console.warn("PUNK AI trend analysis failed", e);
+      return [];
+    }
   }, [sceneContext]);
 
   const trendingStyles = useMemo(() => {
-    return trendEngine.getTrendingStyles();
+    try {
+      return trendEngine.getTrendingStyles();
+    } catch (e) {
+      return [];
+    }
   }, []);
 
   const bestSettings = useMemo(() => {
     if (!sceneContext) return null;
-    return sceneEngine.determineBestSettings(sceneContext);
+    try {
+      return sceneEngine.determineBestSettings(sceneContext);
+    } catch (e) {
+      console.warn("PUNK AI settings determination failed", e);
+      return null;
+    }
   }, [sceneContext]);
 
   if (!active) return null;
@@ -107,16 +136,16 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
               {/* Scene Info */}
               <div className="flex flex-wrap gap-1 mb-2">
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/50">
-                  {sceneContext.locationType}
+                  {sceneContext?.locationType || 'Unknown'}
                 </span>
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/50">
-                  {sceneContext.environmentMood}
+                  {sceneContext?.environmentMood || 'Neutral'}
                 </span>
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/50">
-                  {sceneContext.timeOfDay}
+                  {sceneContext?.timeOfDay || 'Day'}
                 </span>
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/50">
-                  {sceneContext.indoorLighting} light
+                  {sceneContext?.indoorLighting || 'Ambient'} light
                 </span>
               </div>
 
@@ -124,15 +153,15 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
               <div className="grid grid-cols-2 gap-1">
                 <div className="text-[9px] text-white/40">
                   <span className="text-white/70">Lens: </span>
-                  {bestSettings.bestLensSuggestion.split(' — ')[0]}
+                  {bestSettings?.bestLensSuggestion?.split(' — ')[0] || 'Standard'}
                 </div>
                 <div className="text-[9px] text-white/40">
                   <span className="text-white/70">Angle: </span>
-                  {sceneContext.cameraAngle.replace(/_/g, ' ')}
+                  {sceneContext?.cameraAngle?.replace(/_/g, ' ') || 'Eye Level'}
                 </div>
                 <div className="text-[9px] text-white/40 col-span-2">
                   <span className="text-white/70">Framing: </span>
-                  {bestSettings.bestFraming.split(' — ')[0]}
+                  {bestSettings?.bestFraming?.split(' — ')[0] || 'Center'}
                 </div>
               </div>
             </GlassCard>

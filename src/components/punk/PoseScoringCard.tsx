@@ -83,13 +83,13 @@ export function PoseScoringCard({ score, rank }: PoseScoringCardProps) {
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
             <circle cx="12" cy="13" r="4" />
           </svg>
-          <p className="text-[10px] text-white/60">{score.cameraInstructions}</p>
+          <p className="text-[10px] text-white/60">{score?.cameraInstructions || 'No instructions'}</p>
         </div>
         <div className="flex gap-2">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FB923C" strokeWidth="2" className="flex-shrink-0 mt-0.5">
             <path d="M12 3v18M3 12h18" />
           </svg>
-          <p className="text-[10px] text-white/60">{score.lightingInstructions}</p>
+          <p className="text-[10px] text-white/60">{score?.lightingInstructions || 'No instructions'}</p>
         </div>
       </div>
 
@@ -99,7 +99,7 @@ export function PoseScoringCard({ score, rank }: PoseScoringCardProps) {
         style={{ backgroundColor: `${overallColor}10` }}
       >
         <span className="font-medium text-white/70">Expected: </span>
-        <span className="text-white/50">{score.expectedResult}</span>
+        <span className="text-white/50">{score?.expectedResult || 'N/A'}</span>
       </div>
     </div>
   );

@@ -21,15 +21,13 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
   useEffect(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
-    // Always ensure the manager knows about our current video element when we mount/remount
+
     if (video) {
       cameraManager.attachVideoElement(video);
     }
 
     if (!video || !canvas || loading || error) return;
 
-    // Try initializing WebGL2 context
     const gl = canvas.getContext('webgl2', {
       preserveDrawingBuffer: true,
       alpha: false,
@@ -53,7 +51,6 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
     const { positionBuffer, texCoordBuffer } = setupLUTGeometry(gl);
 
-    // Setup attributes
     const aPosition = gl.getAttribLocation(program, 'a_position');
     gl.enableVertexAttribArray(aPosition);
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -64,7 +61,6 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
     gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 0, 0);
 
-    // Setup input frame texture
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -74,17 +70,14 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
     const render = () => {
       if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-        // Match canvas dimensions to video
         if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
         }
 
-        // Upload new frame
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
-        // Fetch LUT & pro parameters
         const lutState = useLUTStore.getState();
         const preset = lutState.currentLUT;
         const pro = lutState.proControls;
@@ -124,7 +117,9 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
     return () => {
       cancelAnimationFrame(renderLoopRef.current);
-      gl.deleteTexture(texture);
+      if (gl.getParameter(gl.TEXTURE_BINDING_2D)) {
+        gl.deleteTexture(texture);
+      }
       gl.deleteBuffer(positionBuffer);
       gl.deleteBuffer(texCoordBuffer);
       gl.deleteProgram(program);
@@ -136,8 +131,11 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-[#6B7280]">Starting camera...</p>
+            <div className="relative w-12 h-12">
+              <div className="absolute inset-0 border-2 border-[#A78BFA]/30 border-t-[#A78BFA] rounded-full animate-spin" />
+              <div className="absolute inset-1 border-2 border-[#6EE7B7]/20 border-b-[#6EE7B7] rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+            </div>
+            <p className="text-sm text-[#6B7280] font-mono tracking-wider">INITIALIZING CAMERA...</p>
           </div>
         </div>
       )}
@@ -145,8 +143,8 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20">
           <div className="text-center px-6 max-w-sm">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[#A78BFA]/10 flex items-center justify-center">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="1.5">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#A78BFA]/20 to-[#EF4444]/20 flex items-center justify-center border border-white/10">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
                 <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
                 <line x1="1" y1="1" x2="23" y2="23" />
               </svg>
@@ -156,7 +154,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
             <div className="flex flex-col gap-2">
               <button
                 onClick={startCamera}
-                className="px-6 py-2.5 rounded-full bg-[#A78BFA] text-white text-sm font-medium hover:bg-[#9678E8] transition-colors"
+                className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-medium hover:opacity-90 transition-all shadow-[0_0_20px_rgba(167,139,250,0.3)]"
               >
                 Try Again
               </button>
@@ -166,12 +164,11 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         </div>
       )}
 
-      {/* Render raw video in offscreen/hidden state if WebGL works, otherwise show it normally */}
       <video
         ref={videoRef}
-        autoPlay={true}
-        playsInline={true}
-        muted={true}
+        autoPlay
+        playsInline
+        muted
         className={
           webglSupported
             ? 'absolute top-0 left-0 w-full h-full opacity-[0.01] pointer-events-none -z-10 object-cover'
@@ -179,7 +176,6 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         }
       />
 
-      {/* WebGL viewport canvas */}
       <canvas
         ref={canvasRef}
         className={
@@ -190,7 +186,9 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
       />
 
       {!loading && !error && (
-        <div className="absolute inset-0 pointer-events-none border border-[#A78BFA]/5" />
+        <div className="absolute inset-0 pointer-events-none" style={{
+          boxShadow: 'inset 0 0 100px rgba(167, 139, 250, 0.03), inset 0 0 1px rgba(167, 139, 250, 0.1)'
+        }} />
       )}
 
       <CameraDebugPanel />
