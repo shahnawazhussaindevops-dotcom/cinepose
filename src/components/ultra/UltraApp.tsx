@@ -334,7 +334,7 @@ function UltraAppInner() {
   );
 }
 
-export function UltraApp() {
+export default function UltraApp() {
   return (
     <CameraProvider>
       <ErrorBoundary>
