@@ -166,7 +166,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         muted
         className={
           webglSupported
-            ? 'absolute top-0 left-0 w-1 h-1 opacity-0 pointer-events-none'
+            ? 'absolute top-0 left-0 w-full h-full opacity-[0.01] pointer-events-none -z-10 object-cover'
             : `w-full h-full object-cover ${facingFront ? 'scale-x-[-1]' : ''}`
         }
       />
