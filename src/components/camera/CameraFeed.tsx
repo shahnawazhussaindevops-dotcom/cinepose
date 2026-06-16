@@ -173,7 +173,8 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         autoPlay
         playsInline
         muted
-        className={`absolute inset-0 w-full h-full object-cover ${facingFront ? 'scale-x-[-1]' : ''}`}
+        disablePictureInPicture
+        className={`absolute inset-0 w-full h-full object-cover block ${facingFront ? 'scale-x-[-1]' : ''}`}
       />
 
       <canvas

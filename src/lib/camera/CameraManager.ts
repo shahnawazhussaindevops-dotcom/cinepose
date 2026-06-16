@@ -1,12 +1,10 @@
 import type { CameraDiagnostics, CameraErrorInfo, CameraConfig, CameraFacingMode, CameraDeviceInfo, CameraStatus } from './types';
 import type { CameraEventCallback } from './types';
-import { log, getPlatformInfo } from './mediaUtils';
+import { log, isSecureContext, getPlatformInfo } from './mediaUtils';
 import { checkCameraPermission } from './permissions';
 import {
   createCameraStreamWithDeviceDiscovery,
   stopMediaStream,
-  pauseMediaStream,
-  resumeMediaStream,
   attachStreamToVideo,
   detachStreamFromVideo,
   getTrackInfo,
@@ -14,6 +12,7 @@ import {
 import { enumerateCamerasWithFallback } from './cameraDevice';
 
 const PREFERRED_CAMERA_KEY = 'cinepose_preferred_camera';
+const MAX_RECONNECT_ATTEMPTS = 3;
 
 export class CameraManager {
   private stream: MediaStream | null = null;
@@ -23,7 +22,7 @@ export class CameraManager {
   private currentConfig: CameraConfig | null = null;
   private currentDevice: CameraDeviceInfo | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 3;
+  private maxReconnectAttempts = MAX_RECONNECT_ATTEMPTS;
   private userInitiated = false;
 
   public diagnostics: CameraDiagnostics = {
@@ -40,11 +39,13 @@ export class CameraManager {
 
   constructor() {
     this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
+    this.handlePageHide = this.handlePageHide.bind(this);
     this.handleOrientationChange = this.handleOrientationChange.bind(this);
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', this.handleVisibilityChange);
     }
     if (typeof window !== 'undefined') {
+      window.addEventListener('pagehide', this.handlePageHide);
       window.addEventListener('orientationchange', this.handleOrientationChange);
       window.addEventListener('resize', this.handleOrientationChange);
     }
@@ -55,6 +56,7 @@ export class CameraManager {
       document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
     if (typeof window !== 'undefined') {
+      window.removeEventListener('pagehide', this.handlePageHide);
       window.removeEventListener('orientationchange', this.handleOrientationChange);
       window.removeEventListener('resize', this.handleOrientationChange);
     }
@@ -123,6 +125,21 @@ export class CameraManager {
   public async startCamera(config?: CameraConfig): Promise<boolean> {
     this.userInitiated = true;
 
+    if (!isSecureContext()) {
+      this.updateDiagnostics({
+        status: 'error',
+        error: {
+          type: 'SecurityError',
+          message: 'Camera access requires a secure connection (HTTPS).',
+          originalError: null,
+          actionable: true,
+          suggestion: 'Access this site via HTTPS.',
+          retryable: false,
+        },
+      });
+      return false;
+    }
+
     const finalConfig: CameraConfig = config || {
       preferredFacingMode: this.loadPreferredCamera() || 'environment',
     };
@@ -137,14 +154,6 @@ export class CameraManager {
 
     const permCheck = await checkCameraPermission();
     this.updateDiagnostics({ permissionState: permCheck.state });
-
-    if (permCheck.error && permCheck.state === 'denied') {
-      this.updateDiagnostics({
-        status: 'error',
-        error: permCheck.error,
-      });
-      return false;
-    }
 
     const result = await createCameraStreamWithDeviceDiscovery(finalConfig);
 
@@ -226,6 +235,7 @@ export class CameraManager {
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       log.warn('Max reconnection attempts reached');
+      this.reconnectAttempts = 0;
       this.updateDiagnostics({
         status: 'error',
         error: {
@@ -245,9 +255,14 @@ export class CameraManager {
 
     this.updateDiagnostics({ status: 'starting', error: null });
 
-    await new Promise(resolve => setTimeout(resolve, 300 * this.reconnectAttempts));
+    const delay = 300 * Math.pow(2, this.reconnectAttempts - 1);
+    await new Promise(resolve => setTimeout(resolve, delay));
 
-    return await this.startCamera(this.currentConfig);
+    const success = await this.startCamera(this.currentConfig);
+    if (success) {
+      this.reconnectAttempts = 0;
+    }
+    return success;
   }
 
   public getStream() {
@@ -267,24 +282,31 @@ export class CameraManager {
 
     if (document.visibilityState === 'hidden') {
       if (this.diagnostics.status === 'active' && this.stream) {
-        log.info('App went to background, pausing camera');
-        pauseMediaStream(this.stream);
+        log.info('App went to background, fully stopping camera');
+        stopMediaStream(this.stream);
+        this.stream = null;
         this.isPausedByBackground = true;
+        this.updateDiagnostics({
+          status: 'stopped',
+          streamActive: false,
+        });
       }
     } else if (document.visibilityState === 'visible') {
       if (this.isPausedByBackground) {
         this.isPausedByBackground = false;
-        if (this.stream) {
-          log.info('App returned to foreground, resuming camera');
-          resumeMediaStream(this.stream);
-          if (this.videoElement) {
-            this.videoElement.play().catch(e => log.warn('Resume video play failed:', e));
-          }
-        } else if (this.userInitiated && this.currentConfig) {
-          log.info('Stream lost while in background, reconnecting...');
-          this.reconnectCamera();
-        }
+        log.info('App returned to foreground, reconnecting camera');
+        this.reconnectCamera();
       }
+    }
+  }
+
+  private handlePageHide() {
+    if (this.stream) {
+      log.info('Page hiding, stopping camera tracks');
+      stopMediaStream(this.stream);
+      this.stream = null;
+      this.isPausedByBackground = false;
+      this.updateDiagnostics({ status: 'stopped', streamActive: false });
     }
   }
 

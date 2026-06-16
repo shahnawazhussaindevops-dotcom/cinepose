@@ -100,10 +100,30 @@ export async function createCameraStream(config: CameraConfig): Promise<StreamRe
   return { stream: null, device: null, error: lastError };
 }
 
+const SAFE_RESOLUTIONS = [
+  { width: 1280, height: 720 },
+  { width: 640, height: 480 },
+  { width: 1920, height: 1080 },
+] as const;
+
+function normalizeResolution(resolution?: { width: number; height: number }): { width: { ideal: number }; height: { ideal: number } } | undefined {
+  if (!resolution) return undefined;
+  const safe = SAFE_RESOLUTIONS.find(r => r.width === resolution.width && r.height === resolution.height);
+  if (safe) return { width: { ideal: safe.width }, height: { ideal: safe.height } };
+  if (resolution.width >= 1920 || resolution.height >= 1080) {
+    return { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  }
+  if (resolution.width >= 1280 || resolution.height >= 720) {
+    return { width: { ideal: 1280 }, height: { ideal: 720 } };
+  }
+  return { width: { ideal: 640 }, height: { ideal: 480 } };
+}
+
 function buildFallbackConstraints(config: CameraConfig): MediaStreamConstraints[] {
   const platform = getPlatformInfo();
   const baseVideo: MediaTrackConstraints = {
     facingMode: config.preferredFacingMode === 'unknown' ? 'user' : config.preferredFacingMode,
+    frameRate: { ideal: 30 },
   };
 
   if (config.preferredDeviceId) {
@@ -111,13 +131,16 @@ function buildFallbackConstraints(config: CameraConfig): MediaStreamConstraints[
   }
 
   const lowRes = platform.isMobile && !platform.isTablet;
+  const safeRes = normalizeResolution(config.resolution);
   const constraints: MediaStreamConstraints[] = [];
 
   constraints.push({
     video: {
       ...baseVideo,
-      width: lowRes ? { ideal: 640 } : config.resolution?.width ? { ideal: config.resolution.width } : { ideal: 1280 },
-      height: lowRes ? { ideal: 480 } : config.resolution?.height ? { ideal: config.resolution.height } : { ideal: 720 },
+      ...(lowRes
+        ? { width: { ideal: 640 }, height: { ideal: 480 } }
+        : safeRes || { width: { ideal: 1280 }, height: { ideal: 720 } }
+      ),
     },
     audio: false,
   });
@@ -143,12 +166,26 @@ function buildFallbackConstraints(config: CameraConfig): MediaStreamConstraints[
       facingMode: config.preferredFacingMode === 'environment' ? 'user' : 'environment',
       width: { ideal: 640 },
       height: { ideal: 480 },
+      frameRate: { ideal: 30 },
     },
     audio: false,
   });
 
   constraints.push({
-    video: true,
+    video: {
+      width: { ideal: 640 },
+      height: { ideal: 480 },
+      frameRate: { ideal: 30 },
+    },
+    audio: false,
+  });
+
+  constraints.push({
+    video: {
+      width: { ideal: 320 },
+      height: { ideal: 240 },
+      frameRate: { ideal: 15 },
+    },
     audio: false,
   });
 
