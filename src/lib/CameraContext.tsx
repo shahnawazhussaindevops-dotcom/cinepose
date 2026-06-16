@@ -24,18 +24,23 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Bind video ref to manager
-    if (videoRef.current) {
-      cameraManager.attachVideoElement(videoRef.current);
-    }
-  }, [videoRef]);
-
-  useEffect(() => {
+    // Fallback: poll briefly to ensure videoRef gets attached if it's rendered late
+    const interval = setInterval(() => {
+      if (videoRef.current) {
+        cameraManager.attachVideoElement(videoRef.current);
+        clearInterval(interval);
+      }
+    }, 200);
+    
     cameraManager.setDiagnosticsCallback((d) => {
       setLoading(d.status === 'starting');
       setError(d.status === 'error' ? d.errorMessage : null);
     });
-    return () => cameraManager.destroy();
+    
+    return () => {
+      clearInterval(interval);
+      cameraManager.destroy();
+    };
   }, []);
 
   const stopCamera = useCallback(() => {
@@ -43,6 +48,9 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startCamera = useCallback(async (): Promise<boolean> => {
+    if (videoRef.current) {
+      cameraManager.attachVideoElement(videoRef.current);
+    }
     const facingFront = useCameraStore.getState().facingFront;
     return await cameraManager.startCamera(facingFront ? 'user' : 'environment');
   }, []);
