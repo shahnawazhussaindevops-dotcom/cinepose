@@ -184,21 +184,17 @@ function UltraAppInner() {
     setModeOpen(prev => prev === mode ? null : mode);
   }, []);
 
-  if (!appReady) {
-    return (
-      <CameraFeed>
-        <PermissionsGate onStartCamera={handleStartCamera} onComplete={handlePermissionsComplete} contextError={error} />
-      </CameraFeed>
-    );
-  }
-
   return (
     <div className="fixed inset-0 bg-black" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-      {/* Ambient grid overlay */}
+      {/* Ambient grid overlay - always rendered */}
       <div className="absolute inset-0 bg-grid-dense z-[1] pointer-events-none opacity-30" />
 
-      {/* Camera Feed */}
-      <CameraFeed />
+      {/* Camera Feed - always mounted, never unmounts */}
+      <CameraFeed>
+        {!appReady && (
+          <PermissionsGate onStartCamera={handleStartCamera} onComplete={handlePermissionsComplete} contextError={error} />
+        )}
+      </CameraFeed>
 
       {/* Loading Overlay */}
       <AnimatePresence>
