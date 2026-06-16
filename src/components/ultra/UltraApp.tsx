@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CameraProvider, useCameraContext } from '../../lib/CameraContext';
 import { CameraFeed } from '../camera/CameraFeed';
@@ -59,7 +59,7 @@ function UltraAppInner() {
   const { videoRef, loading, error, startCamera, takePhoto } = useCameraContext();
   const { lighting, startAnalysis } = useLighting();
   const { detectCameraAngle } = useGyroscope();
-  const { setCurrentLighting, isFlashOn, setFlashOn } = useCameraStore();
+  const { isFlashOn, setFlashOn } = useCameraStore();
   const { recommendedPoses, currentPoseIndex, setRecommendedPoses, selectedGender, setGender } = usePoseStore();
   const { currentLUT } = useLUTStore();
   const { showPoseMode, setShowPoseMode, showDroneMode, setShowDroneMode, showLUTPicker, setShowLUTPicker, settings } = useAppStore();
@@ -74,6 +74,11 @@ function UltraAppInner() {
   const [showPUNK, setShowPUNK] = useState(false);
   const [isScanning, setIsScanning] = useState(true);
   const [appReady, setAppReady] = useState(false);
+  const lightingRef = useRef(lighting);
+  lightingRef.current = lighting;
+  const onScanCompleteRef = useRef(() => setIsScanning(false));
+  onScanCompleteRef.current = () => setIsScanning(false);
+  const handleScanComplete = useCallback(() => onScanCompleteRef.current(), []);
   const [modeOpen, setModeOpen] = useState<'photographer'|'cinematographer'|'outfit'|'location'|'director'|'hollywood'|'master'|'reel'|'cinegpt'|'trends'|'ar'|'clone'|null>(null);
   const [activeCategory, setActiveCategory] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -191,7 +196,7 @@ function UltraAppInner() {
       <div className="absolute inset-0 bg-grid-dense z-[1] pointer-events-none opacity-30" />
 
       {/* Camera Feed */}
-      <CameraFeed onFrame={(video) => { if (lighting) setCurrentLighting(lighting); }} />
+      <CameraFeed />
 
       {/* Loading Overlay */}
       <AnimatePresence>
@@ -222,7 +227,7 @@ function UltraAppInner() {
       {/* Punk Scanning Phase */}
       <AnimatePresence>
         {isScanning && !loading && (
-          <PunkScanningUI onScanComplete={() => setIsScanning(false)} />
+          <PunkScanningUI onScanComplete={handleScanComplete} />
         )}
       </AnimatePresence>
 
