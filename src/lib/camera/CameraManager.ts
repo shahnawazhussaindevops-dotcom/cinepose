@@ -82,9 +82,7 @@ export class CameraManager {
   public attachVideoElement(video: HTMLVideoElement) {
     this.videoElement = video;
     if (this.stream && this.videoElement.srcObject !== this.stream) {
-      attachStreamToVideo(this.videoElement, this.stream).catch(e =>
-        log.warn('Stream attach to video failed:', e)
-      );
+      attachStreamToVideo(this.videoElement, this.stream);
     }
   }
 
@@ -162,11 +160,8 @@ export class CameraManager {
       this.currentDevice = result.device;
 
       if (this.videoElement) {
-        try {
-          await attachStreamToVideo(this.videoElement, result.stream);
-        } catch (attachErr) {
-          log.warn('Video attachment failed:', attachErr);
-        }
+        attachStreamToVideo(this.videoElement, result.stream);
+        this.playVideo(this.videoElement);
       }
 
       const track = result.stream.getVideoTracks()[0];
@@ -277,6 +272,19 @@ export class CameraManager {
     return this.diagnostics.status === 'active';
   }
 
+  private playVideo(video: HTMLVideoElement) {
+    video.play().catch((err) => {
+      log.warn('Video play() failed, will retry on next interaction:', err);
+      const resumeOnInteraction = () => {
+        video.play().catch(e => log.warn('Retry play() failed:', e));
+        document.removeEventListener('touchstart', resumeOnInteraction);
+        document.removeEventListener('click', resumeOnInteraction);
+      };
+      document.addEventListener('touchstart', resumeOnInteraction, { once: true });
+      document.addEventListener('click', resumeOnInteraction, { once: true });
+    });
+  }
+
   private async reconnectFromBackground() {
     if (!this.currentConfig) {
       this.isPausedByBackground = false;
@@ -292,6 +300,7 @@ export class CameraManager {
 
       if (this.videoElement) {
         this.videoElement.srcObject = result.stream;
+        this.playVideo(this.videoElement);
       }
 
       const track = result.stream.getVideoTracks()[0];
@@ -365,7 +374,7 @@ export class CameraManager {
       const platform = getPlatformInfo();
       if (platform.isMobile) {
         setTimeout(() => {
-          this.videoElement?.play().catch(() => {});
+          if (this.videoElement) this.playVideo(this.videoElement);
         }, 300);
       }
     }

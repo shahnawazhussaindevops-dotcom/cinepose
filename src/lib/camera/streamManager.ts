@@ -234,21 +234,13 @@ export function resumeMediaStream(stream: MediaStream | null) {
   });
 }
 
-export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream): Promise<void> {
+export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream) {
   video.srcObject = stream;
   video.muted = true;
 
   if (!video.hasAttribute('playsinline')) {
     video.setAttribute('playsinline', '');
   }
-
-  if (video.paused) {
-    return video.play().catch((err) => {
-      log.warn('Video play() failed (expected on mobile without gesture):', err);
-    });
-  }
-
-  return Promise.resolve();
 }
 
 export function detachStreamFromVideo(video: HTMLVideoElement | null) {

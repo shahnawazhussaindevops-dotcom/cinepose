@@ -179,8 +179,8 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ opacity: 0, pointerEvents: 'none' }}
+        className="absolute inset-0 w-full h-full"
+        style={{ visibility: 'hidden', pointerEvents: 'none' }}
       />
 
       {isCameraReady && (
