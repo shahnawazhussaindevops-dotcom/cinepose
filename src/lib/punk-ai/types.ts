@@ -1,3 +1,25 @@
+export type Gender = 'male' | 'female' | 'neutral';
+export type SceneType = 'urban' | 'nature' | 'indoor' | 'beach' | 'mountain' | 'street' | 'architecture';
+export type CameraAngle = 'eye_level' | 'low_angle' | 'high_angle' | 'bird_eye' | 'overhead';
+
+export interface JointPosition {
+  name: string;
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface Pose {
+  id: string;
+  name: string;
+  category: PoseCategory;
+  description: string;
+  genders: Gender[];
+  scenes: SceneType[];
+  angles: CameraAngle[];
+  joints: JointPosition[];
+}
+
 export type PoseCategory =
   | 'portrait' | 'travel' | 'fashion' | 'luxury' | 'couple' | 'family'
   | 'solo' | 'street' | 'nature' | 'beach' | 'mountain' | 'sunset'

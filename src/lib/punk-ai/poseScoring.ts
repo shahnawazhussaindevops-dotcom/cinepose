@@ -1,5 +1,5 @@
-import type { PoseScore, SceneContext, StyleTab } from './types';
-import type { Pose } from '../types';
+import type { PoseScore, SceneContext, StyleTab, Pose } from './types';
+import type { PunkPose } from '../../components/punk/PunkPoseDatabase';
 import { ALL_POSES } from '../../components/punk/PunkPoseDatabase';
 
 export class PoseScoringEngine {
@@ -47,7 +47,7 @@ export class PoseScoringEngine {
   }
 
   getTopPoses(context: SceneContext, style: StyleTab, count: number = 5): PoseScore[] {
-    const stylePoses = ALL_POSES.filter(p => p.styles.includes(style));
+    const stylePoses = (ALL_POSES as PunkPose[]).filter(p => p.styles.includes(style));
     const scored = stylePoses.map(p => this.scorePose(p, context, style));
     return scored.sort((a, b) => b.overallScore - a.overallScore).slice(0, count);
   }
