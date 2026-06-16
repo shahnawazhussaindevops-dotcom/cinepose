@@ -198,50 +198,20 @@ export function resumeMediaStream(stream: MediaStream | null) {
 }
 
 export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream): Promise<void> {
-  return new Promise((resolve, reject) => {
-    video.srcObject = stream;
+  video.srcObject = stream;
+  video.muted = true;
+
+  if (!video.hasAttribute('playsinline')) {
     video.setAttribute('playsinline', '');
-    video.setAttribute('autoplay', '');
-    video.muted = true;
-
-    const onCanPlay = () => {
-      video.removeEventListener('canplay', onCanPlay);
-      video.removeEventListener('error', onError);
-      video.play()
-        .then(() => resolve())
-        .catch((err) => {
-          log.warn('Video play() failed on canplay, retrying...', err);
-          retryPlay(video).then(resolve).catch(reject);
-        });
-    };
-
-    const onError = () => {
-      video.removeEventListener('canplay', onCanPlay);
-      video.removeEventListener('error', onError);
-      reject(new Error('Video element error during stream attachment'));
-    };
-
-    video.addEventListener('canplay', onCanPlay);
-    video.addEventListener('error', onError);
-
-    video.load();
-
-    if (video.readyState >= 2) {
-      onCanPlay();
-    }
-  });
-}
-
-async function retryPlay(video: HTMLVideoElement, attempts = 3): Promise<void> {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      await video.play();
-      return;
-    } catch (err) {
-      if (i === attempts - 1) throw err;
-      await new Promise(r => setTimeout(r, 100 * (i + 1)));
-    }
   }
+
+  if (video.paused) {
+    return video.play().catch((err) => {
+      log.warn('Video play() failed:', err);
+    });
+  }
+
+  return Promise.resolve();
 }
 
 export function detachStreamFromVideo(video: HTMLVideoElement | null) {

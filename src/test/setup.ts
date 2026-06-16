@@ -116,7 +116,10 @@ const mockDocument = {
         videoHeight: 720,
         readyState: 4,
         muted: false,
+        paused: true,
         setAttribute: () => {},
+        hasAttribute: () => false,
+        removeAttribute: () => {},
       };
     }
     return {};

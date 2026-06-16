@@ -5,8 +5,6 @@ import { useLUTStore } from '../../stores/lutStore';
 import { createLUTProgram, setupLUTGeometry, applyLUT } from '../lut/LUTEngine';
 import { CameraDebugPanel } from './CameraDebugPanel';
 import { cameraManager } from '../../lib/camera/CameraManager';
-import { useCameraErrorHandler } from '../../hooks/useCameraErrorHandler';
-import { getPlatformInfo, getDisplayAspectRatio } from '../../lib/camera/mediaUtils';
 
 interface CameraFeedProps {
   onFrame?: (video: HTMLVideoElement) => void;
@@ -14,14 +12,22 @@ interface CameraFeedProps {
   children?: React.ReactNode;
 }
 
+const LUT_FRAME_SKIP = 2;
+
 export function CameraFeed({ onFrame, className = '', children }: CameraFeedProps) {
   const { videoRef, canvasRef, loading, error, startCamera, isCameraReady } = useCameraContext();
   const { facingFront } = useCameraStore();
-  const [renderMode, setRenderMode] = useState<'webgl2' | 'canvas2d' | 'direct'>('direct');
   const [showError, setShowError] = useState<string | null>(null);
   const renderLoopRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [aspectRatio, setAspectRatio] = useState<string>('4/3');
+  const lutResourcesRef = useRef<{
+    gl: WebGL2RenderingContext | null;
+    program: WebGLProgram | null;
+    positionBuffer: WebGLBuffer | null;
+    texCoordBuffer: WebGLBuffer | null;
+    texture: WebGLTexture | null;
+  }>({ gl: null, program: null, positionBuffer: null, texCoordBuffer: null, texture: null });
+  const frameSkipRef = useRef(0);
 
   useEffect(() => {
     setShowError(error);
@@ -32,6 +38,8 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
+    if (!isCameraReady) return;
+
     const gl = canvas.getContext('webgl2', {
       preserveDrawingBuffer: true,
       alpha: false,
@@ -40,37 +48,81 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
     });
 
     if (gl) {
-      setRenderMode('webgl2');
-      initWebGL2Pipeline(gl, video, canvas);
-    } else {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        setRenderMode('canvas2d');
-        initCanvas2DPipeline(ctx, video, canvas);
-      } else {
-        setRenderMode('direct');
-      }
+      gl.clearColor(0, 0, 0, 0);
+      setupLUTPipeline(gl, video, canvas);
     }
 
-    const updateAspectRatio = () => {
-      if (video.videoWidth && video.videoHeight) {
-        setAspectRatio(`${video.videoWidth} / ${video.videoHeight}`);
+    const renderLoop = () => {
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+        const res = lutResourcesRef.current;
+
+        if (res.gl && res.program && res.texture) {
+          frameSkipRef.current = (frameSkipRef.current + 1) % (LUT_FRAME_SKIP + 1);
+          if (frameSkipRef.current === 0) {
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+            if (canvas.width !== w || canvas.height !== h) {
+              canvas.width = w;
+              canvas.height = h;
+            }
+
+            const g = res.gl;
+            g.bindTexture(g.TEXTURE_2D, res.texture);
+            g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, video);
+
+            const lutState = useLUTStore.getState();
+            const preset = lutState.currentLUT;
+            const pro = lutState.proControls;
+
+            applyLUT(g, res.program, res.texture, {
+              u_shadows: preset.colors.shadows,
+              u_mids: preset.colors.mids,
+              u_highlights: preset.colors.highlights,
+              u_saturation: pro.saturation * preset.colors.saturation,
+              u_contrast: pro.contrast + (preset.colors.contrast - 1),
+              u_temperature: pro.temperature + (preset.colors.temperature - 5500),
+              u_tint: pro.tint + preset.colors.tint,
+              u_intensity: lutState.intensity,
+              u_vignette: pro.vignette,
+              u_exposure: pro.exposure,
+              u_liftR: pro.lift[0],
+              u_liftG: pro.lift[1],
+              u_liftB: pro.lift[2],
+              u_gammaR: pro.gamma[0],
+              u_gammaG: pro.gamma[1],
+              u_gammaB: pro.gamma[2],
+              u_gainR: pro.gain[0],
+              u_gainG: pro.gain[1],
+              u_gainB: pro.gain[2],
+            }, canvas.width, canvas.height);
+          }
+        }
+
+        if (onFrame) {
+          onFrame(video);
+        }
       }
+      renderLoopRef.current = requestAnimationFrame(renderLoop);
     };
-    video.addEventListener('loadedmetadata', updateAspectRatio);
-    updateAspectRatio();
+
+    renderLoopRef.current = requestAnimationFrame(renderLoop);
 
     return () => {
       cancelAnimationFrame(renderLoopRef.current);
+      const res = lutResourcesRef.current;
+      if (res.gl) {
+        if (res.texture) res.gl.deleteTexture(res.texture);
+        if (res.positionBuffer) res.gl.deleteBuffer(res.positionBuffer);
+        if (res.texCoordBuffer) res.gl.deleteBuffer(res.texCoordBuffer);
+        if (res.program) res.gl.deleteProgram(res.program);
+      }
+      lutResourcesRef.current = { gl: null, program: null, positionBuffer: null, texCoordBuffer: null, texture: null };
     };
-  }, [onFrame, videoRef, canvasRef, loading, error, facingFront]);
+  }, [onFrame, videoRef, canvasRef, isCameraReady, facingFront]);
 
-  const initWebGL2Pipeline = useCallback((gl: WebGL2RenderingContext, video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
+  function setupLUTPipeline(gl: WebGL2RenderingContext, video: HTMLVideoElement, canvas: HTMLCanvasElement) {
     const program = createLUTProgram(gl);
-    if (!program) {
-      setRenderMode('canvas2d');
-      return;
-    }
+    if (!program) return;
 
     const { positionBuffer, texCoordBuffer } = setupLUTGeometry(gl);
 
@@ -91,86 +143,8 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-    const render = () => {
-      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-        }
-
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-
-        const lutState = useLUTStore.getState();
-        const preset = lutState.currentLUT;
-        const pro = lutState.proControls;
-
-        applyLUT(gl, program, texture, {
-          u_shadows: preset.colors.shadows,
-          u_mids: preset.colors.mids,
-          u_highlights: preset.colors.highlights,
-          u_saturation: pro.saturation * preset.colors.saturation,
-          u_contrast: pro.contrast + (preset.colors.contrast - 1),
-          u_temperature: pro.temperature + (preset.colors.temperature - 5500),
-          u_tint: pro.tint + preset.colors.tint,
-          u_intensity: lutState.intensity,
-          u_vignette: pro.vignette,
-          u_exposure: pro.exposure,
-          u_liftR: pro.lift[0],
-          u_liftG: pro.lift[1],
-          u_liftB: pro.lift[2],
-          u_gammaR: pro.gamma[0],
-          u_gammaG: pro.gamma[1],
-          u_gammaB: pro.gamma[2],
-          u_gainR: pro.gain[0],
-          u_gainG: pro.gain[1],
-          u_gainB: pro.gain[2],
-        }, canvas.width, canvas.height);
-
-        if (onFrame) {
-          onFrame(video);
-        }
-      }
-      renderLoopRef.current = requestAnimationFrame(render);
-    };
-
-    renderLoopRef.current = requestAnimationFrame(render);
-
-    return () => {
-      cancelAnimationFrame(renderLoopRef.current);
-      if (gl.getParameter(gl.TEXTURE_BINDING_2D)) {
-        gl.deleteTexture(texture);
-      }
-      gl.deleteBuffer(positionBuffer);
-      gl.deleteBuffer(texCoordBuffer);
-      gl.deleteProgram(program);
-    };
-  }, [onFrame]);
-
-  const initCanvas2DPipeline = useCallback((ctx: CanvasRenderingContext2D, video: HTMLVideoElement, canvas: HTMLCanvasElement) => {
-    const render = () => {
-      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
-        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-        }
-        ctx.drawImage(video, 0, 0);
-        if (onFrame) {
-          onFrame(video);
-        }
-      }
-      renderLoopRef.current = requestAnimationFrame(render);
-    };
-    renderLoopRef.current = requestAnimationFrame(render);
-  }, [onFrame]);
-
-  const videoClasses = renderMode === 'direct'
-    ? `w-full h-full object-cover ${facingFront ? 'scale-x-[-1]' : ''}`
-    : 'absolute top-0 left-0 w-full h-full opacity-0 pointer-events-none';
-
-  const canvasClasses = renderMode !== 'direct'
-    ? `w-full h-full object-cover ${facingFront ? 'scale-x-[-1]' : ''}`
-    : 'hidden';
+    lutResourcesRef.current = { gl, program, positionBuffer, texCoordBuffer, texture };
+  }
 
   return (
     <div ref={containerRef} className={`relative w-full h-full overflow-hidden bg-black ${className}`}>
@@ -201,20 +175,14 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         autoPlay
         playsInline
         muted
-        className={videoClasses}
+        className={`absolute inset-0 w-full h-full object-cover ${facingFront ? 'scale-x-[-1]' : ''}`}
       />
 
       <canvas
         ref={canvasRef}
-        className={canvasClasses}
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ opacity: 0, pointerEvents: 'none' }}
       />
-
-      {isCameraReady && renderMode === 'direct' && (
-        <div className="absolute inset-0" style={{
-          background: 'transparent',
-          aspectRatio,
-        }} />
-      )}
 
       {isCameraReady && (
         <div className="absolute inset-0 pointer-events-none" style={{
