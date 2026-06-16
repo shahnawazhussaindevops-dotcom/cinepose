@@ -17,6 +17,7 @@
 @layer base {
   * {
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
 
   html {
@@ -24,12 +25,22 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    touch-action: manipulation;
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
     background-color: #0D0D1A;
     color: #F9FAFB;
-    overflow-x: hidden;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    /* Safe area insets for notched phones */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   ::selection {
@@ -158,9 +169,17 @@
     display: none;
   }
 
-  .no-select {
+    .no-select {
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .safe-top {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
   }
 }
 

@@ -11,8 +11,8 @@ interface CameraContextValue {
   startCamera: () => Promise<boolean>;
   stopCamera: () => void;
   captureFrame: () => ImageData | null;
-  capturePhoto: () => string | null;
-  takePhoto: () => string | null;
+  capturePhoto: () => Promise<string | null>;
+  takePhoto: () => Promise<string | null>;
 }
 
 const CameraContext = createContext<CameraContextValue | null>(null);
@@ -67,14 +67,29 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, []);
 
-  const capturePhoto = useCallback((): string | null => {
+  const canvasToDataURL = useCallback((canvas: HTMLCanvasElement): Promise<string | null> => {
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          resolve(canvas.toDataURL('image/jpeg', 0.95));
+          return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => resolve(canvas.toDataURL('image/jpeg', 0.95));
+        reader.readAsDataURL(blob);
+      }, 'image/jpeg', 0.95);
+    });
+  }, []);
+
+  const capturePhoto = useCallback(async (): Promise<string | null> => {
     if (!videoRef.current || !canvasRef.current) return null;
     const video = videoRef.current;
     const canvas = canvasRef.current;
     
     const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
     if (gl) {
-      return canvas.toDataURL('image/jpeg', 0.95);
+      return await canvasToDataURL(canvas);
     }
 
     canvas.width = video.videoWidth || 1920;
@@ -82,11 +97,11 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.drawImage(video, 0, 0);
-    return canvas.toDataURL('image/jpeg', 0.95);
-  }, []);
+    return await canvasToDataURL(canvas);
+  }, [canvasToDataURL]);
 
-  const takePhoto = useCallback(() => {
-    const photoDataUrl = capturePhoto();
+  const takePhoto = useCallback(async () => {
+    const photoDataUrl = await capturePhoto();
     if (photoDataUrl) {
       const currentLutId = useLUTStore.getState().currentLUT.id;
       const photo = {

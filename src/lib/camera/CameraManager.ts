@@ -158,10 +158,13 @@ export class CameraManager {
     }
 
     // If all fallbacks fail, throw the last error gracefully
+    const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     this.updateDiagnostics({
       status: 'error',
       errorName: 'NotFoundError',
-      errorMessage: 'Could not start any camera on this device. Please check permissions.',
+      errorMessage: isMobile
+        ? 'Camera unavailable. On mobile Chrome: tap the 🔒 or ℹ️ icon in the address bar, enable Camera permission, then reload.'
+        : 'Could not start any camera on this device. Please check permissions.',
     });
     return false;
   }

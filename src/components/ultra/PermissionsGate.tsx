@@ -15,6 +15,12 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
     setStep('starting');
     const success = await onStartCamera();
     if (success) {
+      if (typeof screen !== 'undefined' && 'orientation' in screen && typeof (screen.orientation as any).lock === 'function') {
+        try { (screen.orientation as any).lock('portrait-primary'); } catch {}
+      }
+      if (typeof document !== 'undefined' && 'fullscreenElement' in document) {
+        try { document.documentElement.requestFullscreen(); } catch {}
+      }
       onComplete('neutral');
     } else {
       setStep('error');

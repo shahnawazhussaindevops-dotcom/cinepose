@@ -161,8 +161,8 @@ function UltraAppInner() {
     setAppReady(true);
   }, [setGender]);
 
-  const handleCapture = useCallback(() => {
-    const photo = takePhoto();
+  const handleCapture = useCallback(async () => {
+    const photo = await takePhoto();
     if (photo) {
       setToast({ message: 'Photo captured!', type: 'success' });
       setTimeout(() => setToast(null), 2500);
