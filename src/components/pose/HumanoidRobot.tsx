@@ -39,7 +39,7 @@ function JointSphere({ position, color, emissive }: { position: [number, number,
   useFrame((state) => {
     if (meshRef.current) {
       const pulse = 0.7 + 0.3 * Math.sin(state.clock.elapsedTime * 3 + position[1]);
-      meshRef.current.material.opacity = pulse;
+      (meshRef.current.material as THREE.Material).opacity = pulse;
     }
   });
 
