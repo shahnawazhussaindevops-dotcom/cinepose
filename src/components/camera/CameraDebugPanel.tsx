@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { cameraManager, CameraDiagnostics } from '../../lib/camera/CameraManager';
+import { cameraManager, type CameraDiagnostics } from '../../lib/camera/CameraManager';
 
 export function CameraDebugPanel() {
   const [diagnostics, setDiagnostics] = useState<CameraDiagnostics>(cameraManager.diagnostics);
