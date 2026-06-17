@@ -10,6 +10,7 @@ import { PoseControls } from '../pose/PoseControls';
 import { GenderSelector } from '../pose/GenderSelector';
 import { DroneGuide } from '../drone/DroneGuide';
 import { PUNKOverlay } from '../punk/PUNKOverlay';
+import { PunkAIProvider } from '../../lib/llm/punkAIContext';
 import { BottomSheet } from '../ui/BottomSheet';
 import { Toast } from '../ui/Toast';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
@@ -591,7 +592,9 @@ export default function UltraApp() {
   return (
     <CameraProvider>
       <ErrorBoundary>
-        <UltraAppInner />
+        <PunkAIProvider>
+          <UltraAppInner />
+        </PunkAIProvider>
       </ErrorBoundary>
     </CameraProvider>
   );

@@ -159,13 +159,17 @@ export class CameraManager {
       this.stream = result.stream;
       this.currentDevice = result.device;
 
+      const videoTrack = result.stream.getVideoTracks()[0];
+      const trackInfo = getTrackInfo(videoTrack);
+
       if (this.videoElement) {
         attachStreamToVideo(this.videoElement, result.stream);
+        if (trackInfo.resolution) {
+          this.videoElement.width = trackInfo.resolution.width;
+          this.videoElement.height = trackInfo.resolution.height;
+        }
         this.playVideo(this.videoElement);
       }
-
-      const track = result.stream.getVideoTracks()[0];
-      const trackInfo = getTrackInfo(track);
 
       this.savePreferredCamera(trackInfo.facingMode);
 
@@ -306,13 +310,17 @@ export class CameraManager {
       this.stream = result.stream;
       this.currentDevice = result.device;
 
-      if (this.videoElement) {
-        this.videoElement.srcObject = result.stream;
-        this.playVideo(this.videoElement);
-      }
-
       const track = result.stream.getVideoTracks()[0];
       const trackInfo = getTrackInfo(track);
+
+      if (this.videoElement) {
+        attachStreamToVideo(this.videoElement, result.stream);
+        if (trackInfo.resolution) {
+          this.videoElement.width = trackInfo.resolution.width;
+          this.videoElement.height = trackInfo.resolution.height;
+        }
+        this.playVideo(this.videoElement);
+      }
       this.savePreferredCamera(trackInfo.facingMode);
 
       const devices = await enumerateCamerasWithFallback();

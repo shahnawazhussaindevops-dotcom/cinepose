@@ -1,17 +1,22 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { GlassCard } from '../ui/GlassCard';
 import { BottomSheet } from '../ui/BottomSheet';
 import { StyleTabs } from './StyleTabs';
 import { PoseScoringCard } from './PoseScoringCard';
 import { AIDirectorMode } from './AIDirectorMode';
 import { TrendPanel } from './TrendPanel';
+import { AgentDetailPanel } from './AgentDetailPanel';
 import { sceneEngine } from '../../lib/punk-ai/sceneUnderstanding';
 import { poseScoring } from '../../lib/punk-ai/poseScoring';
 import { aiDirector } from '../../lib/punk-ai/director';
 import { trendEngine } from '../../lib/punk-ai/trendEngine';
+import { usePunkAIContext } from '../../lib/llm/punkAIContext';
+import { agentDefinitions } from '../../lib/llm/agentDefinitions';
 import type { StyleTab, PoseScore, DirectorInstruction, TrendData } from '../../lib/punk-ai/types';
+import type { AgentInstruction } from '../../lib/llm/types';
 import { useCameraStore } from '../../stores/cameraStore';
 import { usePoseStore } from '../../stores/poseStore';
+import { useUltraStore } from '../../stores/ultraStore';
 
 interface PUNKOverlayProps {
   active: boolean;
@@ -24,9 +29,29 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
   const [directorStep, setDirectorStep] = useState(0);
   const [showTrends, setShowTrends] = useState(false);
   const [expandedPose, setExpandedPose] = useState<PoseScore | null>(null);
+  const [showAgents, setShowAgents] = useState(false);
 
   const { currentLighting } = useCameraStore();
   const { selectedGender } = usePoseStore();
+  const {
+    agentResult, loading, runAnalysis, llmEnabled,
+    toggleLLM, activeAgents, setActiveAgents,
+  } = usePunkAIContext();
+
+  const llmAgents: AgentInstruction[] = agentResult?.llmAgents || [];
+  const usingLLM = agentResult?.usingLLM ?? false;
+
+  useEffect(() => {
+    if (active) {
+      runAnalysis();
+    }
+  }, [active, runAnalysis]);
+
+  useEffect(() => {
+    if (!active) return;
+    const interval = setInterval(runAnalysis, 8000);
+    return () => clearInterval(interval);
+  }, [active, runAnalysis]);
 
   const sceneContext = useMemo(() => {
     if (!currentLighting) return null;
@@ -36,7 +61,7 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
         currentLighting.colorTemperature || 5500,
         0, 0, false, false,
         currentLighting.shadowClip || 0,
-        currentLighting.highlightClip || 0
+        currentLighting.highlightClip || 0,
       );
     } catch (e) {
       console.warn("PUNK AI scene analysis failed", e);
@@ -106,8 +131,30 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-bold text-[#A78BFA]">PUNK AI</span>
                   <span className="text-[8px] text-[#6B7280]">· Pose Understanding Neural Kernel</span>
+                  {usingLLM && (
+                    <span className="px-1 py-0.5 rounded text-[7px] bg-[#6EE7B7]/10 text-[#6EE7B7] font-mono">
+                      LLM
+                    </span>
+                  )}
                 </div>
                 <div className="flex gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleLLM(); }}
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-medium transition-colors ${
+                      llmEnabled ? 'bg-[#6EE7B7]/20 text-[#6EE7B7]' : 'bg-white/5 text-[#6B7280]'
+                    }`}
+                    title={llmEnabled ? 'LLM-powered (Gemini)' : 'Rule-based (no API)'}
+                  >
+                    {llmEnabled ? '🧠 AI' : '⚙️ RB'}
+                  </button>
+                  <button
+                    onClick={() => setShowAgents(!showAgents)}
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-medium transition-colors ${
+                      showAgents ? 'bg-[#A78BFA]/20 text-[#A78BFA]' : 'bg-white/5 text-[#6B7280]'
+                    }`}
+                  >
+                    Agents
+                  </button>
                   <button
                     onClick={() => setShowTrends(!showTrends)}
                     className={`px-2 py-0.5 rounded-full text-[9px] font-medium transition-colors ${
@@ -133,13 +180,13 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
                 </div>
               </div>
 
-              {/* Scene Info */}
+              {/* Scene Info with LLM summary */}
               <div className="flex flex-wrap gap-1 mb-2">
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/50">
                   {sceneContext?.locationType || 'Unknown'}
                 </span>
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/50">
-                  {sceneContext?.environmentMood || 'Neutral'}
+                  {agentResult?.llmResponse?.mood || sceneContext?.environmentMood || 'Neutral'}
                 </span>
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/50">
                   {sceneContext?.timeOfDay || 'Day'}
@@ -148,6 +195,16 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
                   {sceneContext?.indoorLighting || 'Ambient'} light
                 </span>
               </div>
+
+              {/* LLM Scene Summary */}
+              {agentResult?.llmResponse?.sceneSummary && (
+                <div className="mb-2 p-2 rounded-lg bg-[#A78BFA]/5 border border-[#A78BFA]/10">
+                  <p className="text-[8px] text-[#6EE7B7] font-medium mb-0.5">DIRECTOR'S INSIGHT</p>
+                  <p className="text-[8px] text-white/60 leading-relaxed">
+                    {agentResult.llmResponse.sceneSummary}
+                  </p>
+                </div>
+              )}
 
               {/* Best Settings */}
               <div className="grid grid-cols-2 gap-1">
@@ -178,8 +235,15 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
           onClose={() => { setDirectorActive(false); setDirectorStep(0); }}
         />
 
+        {/* Agent Detail Panel */}
+        {showAgents && (
+          <div className="absolute top-48 left-4 right-4 pointer-events-auto max-h-[45vh] overflow-y-auto">
+            <AgentDetailPanel />
+          </div>
+        )}
+
         {/* Trend Panel */}
-        {showTrends && (
+        {showTrends && !showAgents && (
           <div className="absolute top-48 left-4 right-4 pointer-events-auto max-h-[40vh] overflow-y-auto">
             <GlassCard padding="p-3">
               <TrendPanel
@@ -196,6 +260,25 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
         {/* Bottom Pose Controls */}
         <div className="absolute bottom-0 left-0 right-0 pointer-events-auto">
           <div className="px-4 pb-4 pt-2 bg-gradient-to-t from-[#0D0D1A]/90 via-[#0D0D1A]/60 to-transparent">
+            {/* Agent Activations Bar */}
+            <div className="flex gap-1 mb-2 overflow-x-auto scrollbar-hide">
+              {activeAgents.map(aid => {
+                const def = agentDefinitions.get(aid);
+                if (!def) return null;
+                const llmInfo = llmAgents.find(a => a.agentId === aid);
+                return (
+                  <div
+                    key={aid}
+                    className="flex items-center gap-1 px-1.5 py-1 rounded-full bg-white/5 text-[8px] text-[#6B7280]"
+                    title={`${def.name}: ${def.work.role}`}
+                  >
+                    <span>{def.icon}</span>
+                    <span>{llmInfo ? '🧠' : ''}</span>
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Style Tabs */}
             <div className="mb-2">
               <StyleTabs selected={selectedStyle} onSelect={setSelectedStyle} />

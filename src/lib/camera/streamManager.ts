@@ -237,6 +237,7 @@ export function resumeMediaStream(stream: MediaStream | null) {
 export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream) {
   video.srcObject = stream;
   video.muted = true;
+  video.playsInline = true;
 
   if (!video.hasAttribute('playsinline')) {
     video.setAttribute('playsinline', '');
@@ -246,5 +247,4 @@ export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream
 export function detachStreamFromVideo(video: HTMLVideoElement | null) {
   if (!video) return;
   video.pause();
-  video.srcObject = null;
 }

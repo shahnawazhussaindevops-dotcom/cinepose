@@ -179,7 +179,6 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
       <video
         ref={videoRef}
-        autoPlay
         playsInline
         muted
         disablePictureInPicture

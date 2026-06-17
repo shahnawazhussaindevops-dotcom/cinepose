@@ -16,6 +16,7 @@
   "dependencies": {
     "@astrojs/react": "^5.0.7",
     "@astrojs/vercel": "^10.0.8",
+    "@google/generative-ai": "^0.24.1",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@supabase/supabase-js": "^2.49.4",

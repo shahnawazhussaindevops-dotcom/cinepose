@@ -20,7 +20,7 @@ export default defineConfig({
     host: true,
   },
   vite: {
-    plugins: [tailwindcss()],
+    plugins: [basicSsl(), tailwindcss()],
     ssr: {
       noExternal: ['@react-three/fiber', '@react-three/drei', 'three', 'framer-motion', 'zustand', 'lucide-react'],
     },
