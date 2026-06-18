@@ -184,6 +184,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
       <video
         ref={videoRef}
+        autoPlay
         playsInline
         webkit-playsinline="true"
         x5-playsinline="true"

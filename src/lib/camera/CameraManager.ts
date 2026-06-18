@@ -279,45 +279,17 @@ export class CameraManager {
   }
 
   private playVideo(video: HTMLVideoElement) {
-    let retryCount = 0;
-    const maxRetries = 5;
-
-    const attemptPlay = () => {
-      video.play().catch((err) => {
-        log.warn('Video play() failed, will retry on next interaction:', err);
-        const resumeOnInteraction = () => {
-          video.play().catch(e => log.warn('Retry play() failed:', e));
-          document.removeEventListener('touchstart', resumeOnInteraction);
-          document.removeEventListener('click', resumeOnInteraction);
-        };
-        document.addEventListener('touchstart', resumeOnInteraction, { once: true });
-        document.addEventListener('click', resumeOnInteraction, { once: true });
-      });
-    };
-
-    const attemptPlayWithRetry = () => {
-      video.play().catch((err) => {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          log.warn(`Video play() retry ${retryCount}/${maxRetries}...`);
-          setTimeout(attemptPlayWithRetry, 300 * retryCount);
-        } else {
-          log.warn('Video play() failed after max retries, waiting for interaction');
-          const onInteraction = () => {
-            video.play().catch(() => {});
-            document.removeEventListener('touchstart', onInteraction);
-            document.removeEventListener('click', onInteraction);
-          };
-          document.addEventListener('touchstart', onInteraction, { once: true });
-          document.addEventListener('click', onInteraction, { once: true });
-        }
-      });
-    };
-
-    attemptPlay();
-    if (video.readyState < 2) {
-      video.addEventListener('loadedmetadata', attemptPlayWithRetry, { once: true });
-    }
+    video.play().catch((err) => {
+      log.warn('Video play() failed on loadedmetadata, will retry:', err);
+      const retry = (attempt = 1) => {
+        setTimeout(() => {
+          video.play().catch(() => {
+            if (attempt < 3) retry(attempt + 1);
+          });
+        }, 500 * attempt);
+      };
+      retry();
+    });
   }
 
   private async reconnectFromBackground() {
