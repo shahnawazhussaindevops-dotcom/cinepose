@@ -5,6 +5,7 @@ import { useLUTStore } from '../../stores/lutStore';
 import { createLUTProgram, setupLUTGeometry, applyLUT } from '../lut/LUTEngine';
 import { CameraDebugPanel } from './CameraDebugPanel';
 import { cameraManager } from '../../lib/camera/CameraManager';
+import { getPlatformInfo } from '../../lib/camera/mediaUtils';
 
 interface CameraFeedProps {
   onFrame?: (video: HTMLVideoElement) => void;
@@ -28,6 +29,11 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
     texture: WebGLTexture | null;
   }>({ gl: null, program: null, positionBuffer: null, texCoordBuffer: null, texture: null });
   const frameSkipRef = useRef(0);
+  const isMobileRef = useRef(false);
+
+  useEffect(() => {
+    isMobileRef.current = getPlatformInfo().isMobile;
+  }, []);
 
   useEffect(() => {
     setShowError(error);
@@ -43,6 +49,8 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
   }, [isCameraReady, videoRef]);
 
   useEffect(() => {
+    if (isMobileRef.current) return;
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -98,9 +106,6 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
               u_gammaR: pro.gamma[0],
               u_gammaG: pro.gamma[1],
               u_gammaB: pro.gamma[2],
-              u_gainR: pro.gain[0],
-              u_gainG: pro.gain[1],
-              u_gainB: pro.gain[2],
             }, canvas.width, canvas.height);
           }
         }
@@ -180,8 +185,12 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
       <video
         ref={videoRef}
         playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
         muted
         disablePictureInPicture
+        width="100%"
+        height="100%"
         className={`absolute inset-0 w-full h-full object-cover block ${facingFront ? 'scale-x-[-1]' : ''}`}
       />
 

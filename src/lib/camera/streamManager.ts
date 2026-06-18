@@ -242,6 +242,12 @@ export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream
   if (!video.hasAttribute('playsinline')) {
     video.setAttribute('playsinline', '');
   }
+  if (!video.hasAttribute('webkit-playsinline')) {
+    video.setAttribute('webkit-playsinline', 'true');
+  }
+  if (!video.hasAttribute('x5-playsinline')) {
+    video.setAttribute('x5-playsinline', 'true');
+  }
 }
 
 export function detachStreamFromVideo(video: HTMLVideoElement | null) {

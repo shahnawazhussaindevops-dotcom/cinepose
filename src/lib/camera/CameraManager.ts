@@ -163,6 +163,8 @@ export class CameraManager {
       const trackInfo = getTrackInfo(videoTrack);
 
       if (this.videoElement) {
+        this.videoElement.style.minWidth = '100%';
+        this.videoElement.style.minHeight = '100%';
         attachStreamToVideo(this.videoElement, result.stream);
         if (trackInfo.resolution) {
           this.videoElement.width = trackInfo.resolution.width;
@@ -277,6 +279,9 @@ export class CameraManager {
   }
 
   private playVideo(video: HTMLVideoElement) {
+    let retryCount = 0;
+    const maxRetries = 5;
+
     const attemptPlay = () => {
       video.play().catch((err) => {
         log.warn('Video play() failed, will retry on next interaction:', err);
@@ -290,10 +295,28 @@ export class CameraManager {
       });
     };
 
-    if (video.readyState >= 2) {
-      attemptPlay();
-    } else {
-      video.addEventListener('loadedmetadata', attemptPlay, { once: true });
+    const attemptPlayWithRetry = () => {
+      video.play().catch((err) => {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          log.warn(`Video play() retry ${retryCount}/${maxRetries}...`);
+          setTimeout(attemptPlayWithRetry, 300 * retryCount);
+        } else {
+          log.warn('Video play() failed after max retries, waiting for interaction');
+          const onInteraction = () => {
+            video.play().catch(() => {});
+            document.removeEventListener('touchstart', onInteraction);
+            document.removeEventListener('click', onInteraction);
+          };
+          document.addEventListener('touchstart', onInteraction, { once: true });
+          document.addEventListener('click', onInteraction, { once: true });
+        }
+      });
+    };
+
+    attemptPlay();
+    if (video.readyState < 2) {
+      video.addEventListener('loadedmetadata', attemptPlayWithRetry, { once: true });
     }
   }
 
@@ -314,6 +337,8 @@ export class CameraManager {
       const trackInfo = getTrackInfo(track);
 
       if (this.videoElement) {
+        this.videoElement.style.minWidth = '100%';
+        this.videoElement.style.minHeight = '100%';
         attachStreamToVideo(this.videoElement, result.stream);
         if (trackInfo.resolution) {
           this.videoElement.width = trackInfo.resolution.width;
