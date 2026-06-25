@@ -64,13 +64,18 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startCamera = useCallback(async (): Promise<boolean> => {
+    log.info('CameraContext: startCamera called');
     if (videoRef.current) {
       cameraManager.attachVideoElement(videoRef.current);
+    } else {
+      log.warn('CameraContext: videoRef.current is null');
     }
     const facingFront = useCameraStore.getState().facingFront;
+    log.info('CameraContext: Requesting camera with facingMode:', facingFront ? 'user' : 'environment');
     const success = await cameraManager.startCamera({
       preferredFacingMode: facingFront ? 'user' : 'environment',
     });
+    log.info('CameraContext: startCamera result:', success);
     initAttemptedRef.current = true;
     return success;
   }, []);

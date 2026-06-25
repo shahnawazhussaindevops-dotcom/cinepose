@@ -166,6 +166,18 @@ export class CameraManager {
         this.videoElement.style.minWidth = '100%';
         this.videoElement.style.minHeight = '100%';
         attachStreamToVideo(this.videoElement, result.stream);
+        
+        // Set dimensions when metadata is loaded
+        const onMetadata = () => {
+          if (this.videoElement && trackInfo.resolution) {
+            this.videoElement.width = trackInfo.resolution.width;
+            this.videoElement.height = trackInfo.resolution.height;
+            log.info('Video dimensions set from metadata', trackInfo.resolution);
+          }
+          this.videoElement?.removeEventListener('loadedmetadata', onMetadata);
+        };
+        this.videoElement.addEventListener('loadedmetadata', onMetadata);
+        
         if (trackInfo.resolution) {
           this.videoElement.width = trackInfo.resolution.width;
           this.videoElement.height = trackInfo.resolution.height;
@@ -279,17 +291,33 @@ export class CameraManager {
   }
 
   private playVideo(video: HTMLVideoElement) {
-    video.play().catch((err) => {
-      log.warn('Video play() failed on loadedmetadata, will retry:', err);
-      const retry = (attempt = 1) => {
-        setTimeout(() => {
-          video.play().catch(() => {
-            if (attempt < 3) retry(attempt + 1);
+    // Ensure video is ready to play
+    const tryPlay = () => {
+      if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+        video.play().catch((err) => {
+          log.warn('Video play() failed, will retry:', err);
+          setTimeout(() => tryPlay(), 300);
+        });
+      } else {
+        // Wait for loadeddata event
+        const onLoadedData = () => {
+          video.removeEventListener('loadeddata', onLoadedData);
+          video.play().catch((err) => {
+            log.warn('Video play() failed on loadeddata:', err);
+            setTimeout(() => tryPlay(), 300);
           });
-        }, 500 * attempt);
-      };
-      retry();
-    });
+        };
+        video.addEventListener('loadeddata', onLoadedData);
+        
+        // Fallback timeout
+        setTimeout(() => {
+          video.removeEventListener('loadeddata', onLoadedData);
+          video.play().catch(() => {});
+        }, 1500);
+      }
+    };
+    
+    tryPlay();
   }
 
   private async reconnectFromBackground() {
@@ -312,6 +340,18 @@ export class CameraManager {
         this.videoElement.style.minWidth = '100%';
         this.videoElement.style.minHeight = '100%';
         attachStreamToVideo(this.videoElement, result.stream);
+        
+        // Set dimensions when metadata is loaded
+        const onMetadata = () => {
+          if (this.videoElement && trackInfo.resolution) {
+            this.videoElement.width = trackInfo.resolution.width;
+            this.videoElement.height = trackInfo.resolution.height;
+            log.info('Video dimensions set from metadata on reconnect', trackInfo.resolution);
+          }
+          this.videoElement?.removeEventListener('loadedmetadata', onMetadata);
+        };
+        this.videoElement.addEventListener('loadedmetadata', onMetadata);
+        
         if (trackInfo.resolution) {
           this.videoElement.width = trackInfo.resolution.width;
           this.videoElement.height = trackInfo.resolution.height;

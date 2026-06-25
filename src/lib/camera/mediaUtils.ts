@@ -137,6 +137,15 @@ export function classifyCameraError(err: unknown): CameraErrorInfo {
   }
 
   if (name === 'NotFoundError' || message.includes('NotFoundError') || message.includes('not found')) {
+    if (platform.isMobile) {
+      return { 
+        ...base, 
+        type: 'CameraUnavailable', 
+        message: 'Camera not accessible. Please ensure camera permissions are enabled and the camera is not being used by another app.', 
+        suggestion: 'Check Settings > Apps > Browser > Permissions > Camera is enabled, then reload.', 
+        retryable: true 
+      };
+    }
     return { ...base, type: 'CameraUnavailable', message: 'No camera found on this device. Please ensure a camera is connected and not being used by another app.', suggestion: 'Connect a camera or close other apps using the camera.', retryable: true };
   }
 

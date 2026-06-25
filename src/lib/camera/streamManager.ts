@@ -122,29 +122,35 @@ function normalizeResolution(resolution?: { width: number; height: number }): { 
 function buildFallbackConstraints(config: CameraConfig): MediaStreamConstraints[] {
   const platform = getPlatformInfo();
   const baseVideo: MediaTrackConstraints = {
-    facingMode: config.preferredFacingMode === 'unknown' ? 'user' : config.preferredFacingMode,
-    frameRate: { ideal: 30 },
+    facingMode: config.preferredFacingMode === 'unknown' ? 'environment' : config.preferredFacingMode,
   };
 
-  if (config.preferredDeviceId) {
+  // Don't use exact deviceId on mobile as it can fail
+  if (config.preferredDeviceId && !platform.isMobile) {
     baseVideo.deviceId = { exact: config.preferredDeviceId };
   }
 
-  const lowRes = platform.isMobile && !platform.isTablet;
-  const safeRes = normalizeResolution(config.resolution);
   const constraints: MediaStreamConstraints[] = [];
 
+  // First try: Simple facingMode only (most compatible on mobile)
   constraints.push({
     video: {
-      ...baseVideo,
-      ...(lowRes
-        ? { width: { ideal: 640 }, height: { ideal: 480 } }
-        : safeRes || { width: { ideal: 1280 }, height: { ideal: 720 } }
-      ),
+      facingMode: config.preferredFacingMode === 'unknown' ? 'environment' : config.preferredFacingMode,
     },
     audio: false,
   });
 
+  // Second try: With ideal resolution
+  constraints.push({
+    video: {
+      ...baseVideo,
+      width: { ideal: platform.isMobile ? 1280 : 1920 },
+      height: { ideal: platform.isMobile ? 720 : 1080 },
+    },
+    audio: false,
+  });
+
+  // Third try: Lower resolution
   constraints.push({
     video: {
       ...baseVideo,
@@ -154,37 +160,16 @@ function buildFallbackConstraints(config: CameraConfig): MediaStreamConstraints[
     audio: false,
   });
 
+  // Fourth try: Just video true (most permissive)
   constraints.push({
-    video: {
-      ...baseVideo,
-    },
+    video: true,
     audio: false,
   });
 
+  // Fifth try: Opposite facing mode with simple constraints
   constraints.push({
     video: {
       facingMode: config.preferredFacingMode === 'environment' ? 'user' : 'environment',
-      width: { ideal: 640 },
-      height: { ideal: 480 },
-      frameRate: { ideal: 30 },
-    },
-    audio: false,
-  });
-
-  constraints.push({
-    video: {
-      width: { ideal: 640 },
-      height: { ideal: 480 },
-      frameRate: { ideal: 30 },
-    },
-    audio: false,
-  });
-
-  constraints.push({
-    video: {
-      width: { ideal: 320 },
-      height: { ideal: 240 },
-      frameRate: { ideal: 15 },
     },
     audio: false,
   });
@@ -193,14 +178,28 @@ function buildFallbackConstraints(config: CameraConfig): MediaStreamConstraints[
 }
 
 export async function createCameraStreamWithDeviceDiscovery(config: CameraConfig): Promise<StreamResult> {
+  const platform = getPlatformInfo();
+  
+  // On mobile, skip device enumeration if we have a facing mode - just try to get the stream directly
+  if (platform.isMobile && config.preferredFacingMode && config.preferredFacingMode !== 'unknown' && !config.preferredDeviceId) {
+    log.info('Mobile device: Skipping enumeration, trying direct stream access with facingMode');
+    return createCameraStream(config);
+  }
+  
   const cameras = await enumerateCamerasWithFallback();
+  
+  if (cameras.length === 0) {
+    log.warn('No cameras found via enumeration, trying direct stream access anyway');
+    return createCameraStream(config);
+  }
+  
   const selected = selectBestCamera(cameras, config.preferredFacingMode, config.preferredDeviceId);
 
   if (selected) {
     log.info(`Selected camera: ${selected.label} (${selected.facingMode})`);
     return createCameraStream({
       ...config,
-      preferredDeviceId: selected.deviceId,
+      preferredDeviceId: selected.deviceId !== 'default' ? selected.deviceId : undefined,
     });
   }
 
@@ -238,7 +237,9 @@ export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream
   video.srcObject = stream;
   video.muted = true;
   video.playsInline = true;
+  video.autoplay = true;
 
+  // Ensure all necessary attributes are set for mobile browsers
   if (!video.hasAttribute('playsinline')) {
     video.setAttribute('playsinline', '');
   }
@@ -248,6 +249,16 @@ export function attachStreamToVideo(video: HTMLVideoElement, stream: MediaStream
   if (!video.hasAttribute('x5-playsinline')) {
     video.setAttribute('x5-playsinline', 'true');
   }
+  if (!video.hasAttribute('x5-video-player-type')) {
+    video.setAttribute('x5-video-player-type', 'h5');
+  }
+  if (!video.hasAttribute('x5-video-player-fullscreen')) {
+    video.setAttribute('x5-video-player-fullscreen', 'false');
+  }
+  
+  // Force video to display
+  video.style.display = 'block';
+  video.style.objectFit = 'cover';
 }
 
 export function detachStreamFromVideo(video: HTMLVideoElement | null) {

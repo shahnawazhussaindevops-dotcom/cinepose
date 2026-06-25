@@ -43,6 +43,37 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
     }
 
     setStep('checking-permission');
+    
+    // On mobile, try to start camera directly without permission check first
+    // as permissions API is unreliable on some Android browsers
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      console.log('[PermissionsGate] Mobile detected, starting camera directly');
+      setStep('starting');
+      const success = await onStartCamera();
+      if (success) {
+        console.log('[PermissionsGate] Camera started successfully');
+        // Try to lock orientation
+        if (typeof screen !== 'undefined' && 'orientation' in screen && typeof (screen.orientation as any).lock === 'function') {
+          try { (screen.orientation as any).lock('portrait-primary').catch(() => {}); } catch {}
+        }
+        onComplete('neutral');
+      } else {
+        console.error('[PermissionsGate] Camera start failed');
+        setStep('error');
+        const diag = cameraManager.diagnostics;
+        const msg = diag.error?.message || 'Could not access camera. Please check permissions and try again.';
+        setErrorMsg(msg);
+        if (diag.error) {
+          const g = getCameraPermissionGuidance(diag.error);
+          setGuidance(g);
+        }
+      }
+      return;
+    }
+    
+    // Desktop flow - check permissions first
     const permCheck = await checkCameraPermission();
 
     if (permCheck.state === 'denied') {
@@ -57,10 +88,7 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
     const success = await onStartCamera();
     if (success) {
       if (typeof screen !== 'undefined' && 'orientation' in screen && typeof (screen.orientation as any).lock === 'function') {
-        try { (screen.orientation as any).lock('portrait-primary'); } catch {}
-      }
-      if (typeof document !== 'undefined' && 'fullscreenElement' in document) {
-        try { document.documentElement.requestFullscreen(); } catch {}
+        try { (screen.orientation as any).lock('portrait-primary').catch(() => {}); } catch {}
       }
       onComplete('neutral');
     } else {
@@ -114,6 +142,15 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
         <div className="w-16 h-16 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mb-8" />
         <p className="text-[#F9FAFB] font-medium">Starting camera...</p>
         <p className="text-xs text-[#6B7280] mt-2">Please allow camera access when prompted</p>
+        <button
+          onClick={() => {
+            setStep('welcome');
+            setTimeout(() => handleOpenCamera(), 100);
+          }}
+          className="mt-8 px-6 py-2 rounded-full bg-white/5 text-white/60 text-xs font-medium hover:bg-white/10 transition-all"
+        >
+          Taking too long? Tap to retry
+        </button>
       </div>
     );
   }
@@ -162,12 +199,24 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
           </div>
         )}
 
-        <button
-          onClick={handleOpenCamera}
-          className="w-full max-w-sm px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold hover:bg-[#9678E8] transition-all glow-violet"
-        >
-          Try Again
-        </button>
+        <div className="w-full max-w-sm space-y-2">
+          <button
+            onClick={handleOpenCamera}
+            className="w-full px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold hover:bg-[#9678E8] transition-all glow-violet"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full px-8 py-2.5 rounded-full bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 transition-all"
+          >
+            Reload Page
+          </button>
+        </div>
+        
+        <p className="text-[9px] text-[#4B5563] mt-4 text-center max-w-xs">
+          Still not working? Try: Settings → Apps → Chrome → Permissions → Camera → Allow
+        </p>
       </div>
     );
   }

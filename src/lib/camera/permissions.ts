@@ -63,25 +63,32 @@ export async function checkCameraPermission(): Promise<PermissionCheckResult> {
 export async function requestCameraAccess(
   constraints?: MediaStreamConstraints
 ): Promise<{ stream: MediaStream | null; error: CameraErrorInfo | null }> {
-  log.info('Requesting camera access...');
+  log.info('Requesting camera access with constraints:', constraints);
 
   const platform = getPlatformInfo();
+  
+  // Use most permissive constraints if none provided
   const useConstraints: MediaStreamConstraints = constraints || {
-    video: {
-      width: { ideal: 1280 },
-      height: { ideal: 720 },
-      facingMode: 'user',
-    },
+    video: true,
     audio: false,
   };
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia(useConstraints);
-    log.info('Camera access granted');
+    log.info('Camera access granted', {
+      tracks: stream.getVideoTracks().length,
+      label: stream.getVideoTracks()[0]?.label,
+      settings: stream.getVideoTracks()[0]?.getSettings(),
+    });
     return { stream, error: null };
   } catch (err) {
     const errorInfo = classifyCameraError(err);
-    log.error('Camera access denied:', { type: errorInfo.type, message: errorInfo.message });
+    log.error('Camera access denied:', { 
+      type: errorInfo.type, 
+      message: errorInfo.message,
+      originalName: (err as any)?.name,
+      originalMessage: (err as any)?.message,
+    });
     return { stream: null, error: errorInfo };
   }
 }

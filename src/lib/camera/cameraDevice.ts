@@ -75,20 +75,44 @@ export async function enumerateCamerasWithFallback(): Promise<CameraDeviceInfo[]
     if (devices.length > 0) {
       return devices;
     }
-  } catch {
-    // Fall through to fallback
+  } catch (err) {
+    log.warn('Initial enumeration failed:', err);
   }
 
-  log.warn('enumerateDevices returned no cameras, attempting getUserMedia to trigger permission...');
+  // On mobile, often need to request permission first before devices are visible
+  log.warn('enumerateDevices returned no cameras, attempting simple getUserMedia to trigger permission...');
+  
+  // Try with most permissive constraints first
   const { stream, error } = await requestCameraAccess({ video: true, audio: false });
   if (stream) {
+    log.info('Got stream, stopping it and re-enumerating devices...');
     stream.getTracks().forEach(t => t.stop());
+    
+    // Small delay to let browser update device list
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     try {
-      return await enumerateCameras(true);
-    } catch {
-      return [];
+      const devicesAfter = await enumerateCameras(true);
+      if (devicesAfter.length > 0) {
+        return devicesAfter;
+      }
+    } catch (err) {
+      log.warn('Re-enumeration failed:', err);
     }
+    
+    // If still no devices but we got a stream, create a synthetic device
+    log.warn('Creating synthetic device info from stream');
+    return [{
+      deviceId: 'default',
+      groupId: '',
+      label: 'Camera',
+      kind: 'videoinput',
+      facingMode: 'environment',
+    }];
+  } else {
+    log.error('Failed to get camera stream:', error?.message);
   }
+  
   return [];
 }
 

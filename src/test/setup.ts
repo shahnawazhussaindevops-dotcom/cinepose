@@ -120,6 +120,7 @@ const mockDocument = {
         setAttribute: () => {},
         hasAttribute: () => false,
         removeAttribute: () => {},
+        style: {},
       };
     }
     return {};

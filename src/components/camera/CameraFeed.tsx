@@ -33,6 +33,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
   useEffect(() => {
     isMobileRef.current = getPlatformInfo().isMobile;
+    console.log('[CameraFeed] Initialized, isMobile:', isMobileRef.current);
   }, []);
 
   useEffect(() => {
@@ -42,8 +43,17 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
   useEffect(() => {
     if (isCameraReady) {
       const video = videoRef.current;
-      if (video && video.paused && video.srcObject) {
-        video.play().catch(() => {});
+      if (video && video.srcObject) {
+        // Force play on mobile
+        if (video.paused) {
+          video.play().catch((err) => {
+            console.error('Video play error:', err);
+            // Retry after a short delay
+            setTimeout(() => {
+              if (video.paused) video.play().catch(() => {});
+            }, 500);
+          });
+        }
       }
     }
   }, [isCameraReady, videoRef]);
@@ -94,7 +104,7 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
               u_mids: preset.colors.mids,
               u_highlights: preset.colors.highlights,
               u_saturation: pro.saturation * preset.colors.saturation,
-              u_contrast: pro.contrast + (preset.colors.contrast - 1),
+              u_contrast: preset.colors.contrast,
               u_temperature: pro.temperature + (preset.colors.temperature - 5500),
               u_tint: pro.tint + preset.colors.tint,
               u_intensity: lutState.intensity,
@@ -192,12 +202,13 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
         disablePictureInPicture
         width="100%"
         height="100%"
-        className={`absolute inset-0 w-full h-full object-cover block ${facingFront ? 'scale-x-[-1]' : ''}`}
+        className={`absolute inset-0 w-full h-full object-cover ${facingFront ? 'scale-x-[-1]' : ''}`}
+        style={{ display: 'block', backgroundColor: '#000' }}
       />
 
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full object-cover"
         style={{ visibility: 'hidden', pointerEvents: 'none' }}
       />
 
@@ -214,8 +225,11 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 }
 
 function CameraErrorOverlay({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const isNotFound = error.toLowerCase().includes('no camera') || error.toLowerCase().includes('not found');
+  const isPermission = error.toLowerCase().includes('denied') || error.toLowerCase().includes('permission');
+  
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20">
+    <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20 p-4">
       <div className="text-center px-6 max-w-sm">
         <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#A78BFA]/20 to-[#EF4444]/20 flex items-center justify-center border border-white/10">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
@@ -223,16 +237,46 @@ function CameraErrorOverlay({ error, onRetry }: { error: string; onRetry: () => 
             <line x1="1" y1="1" x2="23" y2="23" />
           </svg>
         </div>
-        <p className="text-[#F9FAFB] font-medium mb-1">Camera Access Needed</p>
-        <p className="text-sm text-[#6B7280] mb-4">{error}</p>
+        <p className="text-[#F9FAFB] font-medium mb-2 text-lg">Camera Access {isPermission ? 'Denied' : 'Issue'}</p>
+        <p className="text-sm text-[#9CA3AF] mb-4 leading-relaxed">{error}</p>
+        
+        {isNotFound && (
+          <div className="mb-4 p-3 bg-[#1F2937] rounded-lg text-left">
+            <p className="text-xs text-[#D1D5DB] font-medium mb-2">💡 Quick Fixes:</p>
+            <ol className="text-[10px] text-[#9CA3AF] space-y-1 list-decimal list-inside">
+              <li>Check Settings → Apps → Chrome → Permissions → Camera is ON</li>
+              <li>Close other apps that might be using the camera</li>
+              <li>Restart your browser and try again</li>
+              <li>Make sure you're not in private/incognito mode</li>
+            </ol>
+          </div>
+        )}
+        
+        {isPermission && (
+          <div className="mb-4 p-3 bg-[#1F2937] rounded-lg text-left">
+            <p className="text-xs text-[#D1D5DB] font-medium mb-2">🔒 Enable Camera:</p>
+            <ol className="text-[10px] text-[#9CA3AF] space-y-1 list-decimal list-inside">
+              <li>Tap the lock icon in the address bar</li>
+              <li>Find "Camera" permission</li>
+              <li>Change to "Allow"</li>
+              <li>Reload this page</li>
+            </ol>
+          </div>
+        )}
+        
         <div className="flex flex-col gap-2">
           <button
             onClick={onRetry}
-            className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-medium hover:opacity-90 transition-all shadow-[0_0_20px_rgba(167,139,250,0.3)]"
+            className="px-6 py-3 rounded-full bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-medium hover:opacity-90 transition-all shadow-[0_0_20px_rgba(167,139,250,0.3)]"
           >
             Try Again
           </button>
-          <p className="text-[10px] text-[#4B5563]">Camera access is required for CinePose to work. Please allow camera permissions in your browser.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2.5 rounded-full bg-[#374151] text-[#D1D5DB] text-xs font-medium hover:bg-[#4B5563] transition-all"
+          >
+            Reload Page
+          </button>
         </div>
       </div>
     </div>
