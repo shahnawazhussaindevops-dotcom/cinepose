@@ -56,13 +56,6 @@ export function validateEmail(email: string): boolean {
 }
 
 export function validateFileType(file: File, allowedTypes: string[]): boolean {
-  const magicBytes: Record<string, string> = {
-    'image/jpeg': 'ffd8ffe0',
-    'image/png': '89504e47',
-    'image/webp': '52494646',
-    'image/heic': '00000018',
-  };
-
   return allowedTypes.includes(file.type);
 }
 

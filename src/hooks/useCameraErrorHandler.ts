@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { CameraErrorInfo } from '../lib/camera/types';
-import { classifyCameraError, getPlatformInfo } from '../lib/camera/mediaUtils';
+import { classifyCameraError } from '../lib/camera/mediaUtils';
 
 interface ErrorHandlerState {
   currentError: CameraErrorInfo | null;

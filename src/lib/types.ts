@@ -51,6 +51,7 @@ export interface ProColorControls {
   exposure: number;
   highlights: number;
   shadows: number;
+  contrast: number;
   temperature: number;
   tint: number;
   vibrance: number;

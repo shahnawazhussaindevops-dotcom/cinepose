@@ -7,7 +7,11 @@ export function CameraDebugPanel() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    cameraManager.setDiagnosticsCallback((d) => setDiagnostics({ ...d }));
+    const onDiagnostics = (d: CameraDiagnostics) => setDiagnostics({ ...d });
+    cameraManager.setDiagnosticsCallback(onDiagnostics);
+    return () => {
+      cameraManager.removeDiagnosticsCallback(onDiagnostics);
+    };
   }, []);
 
   if (!visible) {

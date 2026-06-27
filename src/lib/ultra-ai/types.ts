@@ -9,7 +9,8 @@ export type LocationType =
 export type MoodType =
   | 'luxury' | 'adventure' | 'romantic' | 'happy' | 'confident' | 'professional'
   | 'calm' | 'energetic' | 'dreamy' | 'cinematic' | 'mysterious' | 'edgy'
-  | 'vintage' | 'minimal' | 'bold' | 'soft' | 'dramatic' | 'nostalgic';
+  | 'vintage' | 'minimal' | 'bold' | 'soft' | 'dramatic' | 'nostalgic'
+  | 'natural';
 
 export type ShotType =
   | 'tracking_shot' | 'push_in' | 'pull_out' | 'orbit_shot' | 'hero_shot'
@@ -20,7 +21,8 @@ export type SceneTypeAI =
   | 'epic_arrival' | 'adventure_discovery' | 'luxury_lifestyle' | 'hero_introduction'
   | 'road_journey' | 'romantic_sunset' | 'dream_sequence' | 'travel_documentary'
   | 'motivational_success' | 'cinematic_walking' | 'editorial_spread'
-  | 'street_candid' | 'golden_hour_portrait' | 'night_cinematography';
+  | 'street_candid' | 'golden_hour_portrait' | 'night_cinematography'
+  | 'urban_editorial' | 'intimate_portrait' | 'mystery_noir';
 
 export interface PhotographerAnalysis {
   qualityScore: number;

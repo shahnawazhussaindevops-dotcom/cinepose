@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../ui/GlassCard';
 import { directorVision } from '../../lib/ultra-ai/directorVision';
 import { useUltraStore } from '../../stores/ultraStore';
@@ -19,6 +19,7 @@ const SCENE_LABELS: Record<SceneTypeAI, string> = {
   motivational_success: 'Motivational Success', cinematic_walking: 'Cinematic Walking',
   editorial_spread: 'Editorial Spread', street_candid: 'Street Candid',
   golden_hour_portrait: 'Golden Hour Portrait', night_cinematography: 'Night Cinema',
+  urban_editorial: 'Urban Editorial', intimate_portrait: 'Intimate Portrait', mystery_noir: 'Mystery Noir',
 };
 
 export function HollywoodDirectorPanel() {

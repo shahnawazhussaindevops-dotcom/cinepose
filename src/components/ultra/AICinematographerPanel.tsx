@@ -11,7 +11,6 @@ export function AICinematographerPanel() {
     setActiveMode, lastLocationType, lastMoodType
   } = useUltraStore();
   const [showShotList, setShowShotList] = React.useState(false);
-  const [showDetail, setShowDetail] = React.useState(false);
 
   useEffect(() => {
     const plan = aiCinematographer.generateShot(lastLocationType, lastMoodType, false, 0.5);

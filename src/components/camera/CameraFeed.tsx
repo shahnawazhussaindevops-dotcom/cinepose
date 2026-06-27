@@ -16,7 +16,7 @@ interface CameraFeedProps {
 const LUT_FRAME_SKIP = 2;
 
 export function CameraFeed({ onFrame, className = '', children }: CameraFeedProps) {
-  const { videoRef, canvasRef, loading, error, startCamera, isCameraReady } = useCameraContext();
+  const { videoRef, canvasRef, loading, error, startCamera, isCameraReady, status } = useCameraContext();
   const { facingFront } = useCameraStore();
   const [showError, setShowError] = useState<string | null>(null);
   const renderLoopRef = useRef<number>(0);
@@ -170,26 +170,75 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 
   return (
     <div ref={containerRef} className={`relative w-full h-full overflow-hidden bg-black ${className}`}>
-      {loading && (
+      {loading && !showError && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20">
           <div className="flex flex-col items-center gap-3">
             <div className="relative w-12 h-12">
               <div className="absolute inset-0 border-2 border-[#A78BFA]/30 border-t-[#A78BFA] rounded-full animate-spin" />
-              <div className="absolute inset-1 border-2 border-[#6EE7B7]/20 border-b-[#6EE7B7] rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+              <div className="absolute inset-1 w-10 h-10 border-2 border-[#6EE7B7]/20 border-b-[#6EE7B7] rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
             </div>
-            <p className="text-sm text-[#6B7280] font-mono tracking-wider">INITIALIZING CAMERA...</p>
+            <p className="text-xs text-zinc-500 font-medium tracking-wider">INITIALIZING CAMERA</p>
+          </div>
+        </div>
+      )}
+
+      {/* Idle state — camera not started, show Start button */}
+      {!loading && !isCameraReady && !showError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20 p-6">
+          <div className="flex flex-col items-center text-center max-w-xs">
+            <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-[#A78BFA]/20 via-[#6EE7B7]/10 to-[#22D3EE]/20 flex items-center justify-center border border-white/10 mb-6">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#cam-idle)" strokeWidth="1.2">
+                <defs>
+                  <linearGradient id="cam-idle" x1="0" y1="0" x2="24" y2="24">
+                    <stop offset="0%" stopColor="#A78BFA" />
+                    <stop offset="100%" stopColor="#6EE7B7" />
+                  </linearGradient>
+                </defs>
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-white mb-1.5">Camera Off</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+              Tap below to activate your camera and start capturing frames.
+            </p>
+            <div className="flex flex-col gap-2 w-full">
+              <button
+                onClick={() => startCamera()}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(167,139,250,0.25)] active:scale-[0.98]"
+              >
+                Start Camera
+              </button>
+              <p className="text-[10px] text-zinc-500 font-medium tracking-wider">
+                STATUS: {status.toUpperCase()}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
       {showError && !loading && !isCameraReady && (
-        <CameraErrorOverlay
-          error={showError}
-          onRetry={() => {
-            setShowError(null);
-            startCamera();
-          }}
-        />
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A]/95 z-20 p-6">
+          <div className="flex flex-col items-center text-center max-w-xs">
+            <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-[#A78BFA]/20 to-[#EF4444]/20 flex items-center justify-center border border-red-500/20 mb-5">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+            </div>
+            <h2 className="text-lg font-semibold text-white mb-1.5">Camera Issue</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed mb-6">{showError}</p>
+            <div className="flex flex-col gap-2 w-full">
+              <button onClick={() => { setShowError(null); startCamera(); }} className="w-full py-3 rounded-xl bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(167,139,250,0.2)]">
+                Try Again
+              </button>
+              <button onClick={() => window.location.reload()} className="w-full py-2.5 rounded-xl bg-zinc-800 text-zinc-400 text-sm font-medium hover:bg-zinc-700 transition-colors">
+                Reload Page
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <video
@@ -227,53 +276,79 @@ export function CameraFeed({ onFrame, className = '', children }: CameraFeedProp
 function CameraErrorOverlay({ error, onRetry }: { error: string; onRetry: () => void }) {
   const isNotFound = error.toLowerCase().includes('no camera') || error.toLowerCase().includes('not found');
   const isPermission = error.toLowerCase().includes('denied') || error.toLowerCase().includes('permission');
-  
+
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20 p-4">
-      <div className="text-center px-6 max-w-sm">
-        <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#A78BFA]/20 to-[#EF4444]/20 flex items-center justify-center border border-white/10">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
+    <div className="absolute inset-0 flex items-center justify-center bg-[#0D0D1A] z-20 p-6">
+      <div className="flex flex-col items-center text-center max-w-xs">
+        <div className="w-20 h-20 rounded-[1.25rem] bg-gradient-to-br from-[#A78BFA]/20 to-[#EF4444]/20 flex items-center justify-center border border-red-500/20 mb-5">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
             <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
             <line x1="1" y1="1" x2="23" y2="23" />
           </svg>
         </div>
-        <p className="text-[#F9FAFB] font-medium mb-2 text-lg">Camera Access {isPermission ? 'Denied' : 'Issue'}</p>
-        <p className="text-sm text-[#9CA3AF] mb-4 leading-relaxed">{error}</p>
-        
+        <p className="text-lg font-semibold text-white mb-1.5">
+          Camera Access {isPermission ? 'Denied' : 'Issue'}
+        </p>
+        <p className="text-sm text-zinc-400 leading-relaxed mb-6">{error}</p>
+
         {isNotFound && (
-          <div className="mb-4 p-3 bg-[#1F2937] rounded-lg text-left">
-            <p className="text-xs text-[#D1D5DB] font-medium mb-2">💡 Quick Fixes:</p>
-            <ol className="text-[10px] text-[#9CA3AF] space-y-1 list-decimal list-inside">
-              <li>Check Settings → Apps → Chrome → Permissions → Camera is ON</li>
-              <li>Close other apps that might be using the camera</li>
-              <li>Restart your browser and try again</li>
-              <li>Make sure you're not in private/incognito mode</li>
+          <div className="w-full rounded-xl bg-zinc-800/50 p-3.5 mb-6 text-left">
+            <div className="flex items-center gap-1.5 mb-2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2">
+                <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+              </svg>
+              <span className="text-[11px] font-semibold text-zinc-300 tracking-wide">QUICK FIXES</span>
+            </div>
+            <ol className="space-y-1">
+              {[
+                'Check Settings → Apps → Chrome → Permissions → Camera is ON',
+                'Close other apps that might be using the camera',
+                'Restart your browser and try again',
+                'Ensure you are not in private/incognito mode',
+              ].map((s, i) => (
+                <li key={i} className="flex gap-2 text-[10px] text-zinc-500">
+                  <span className="text-[#A78BFA] shrink-0 w-3 text-right">{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
             </ol>
           </div>
         )}
-        
+
         {isPermission && (
-          <div className="mb-4 p-3 bg-[#1F2937] rounded-lg text-left">
-            <p className="text-xs text-[#D1D5DB] font-medium mb-2">🔒 Enable Camera:</p>
-            <ol className="text-[10px] text-[#9CA3AF] space-y-1 list-decimal list-inside">
-              <li>Tap the lock icon in the address bar</li>
-              <li>Find "Camera" permission</li>
-              <li>Change to "Allow"</li>
-              <li>Reload this page</li>
+          <div className="w-full rounded-xl bg-zinc-800/50 p-3.5 mb-6 text-left">
+            <div className="flex items-center gap-1.5 mb-2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" strokeWidth="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+              </svg>
+              <span className="text-[11px] font-semibold text-zinc-300 tracking-wide">ENABLE CAMERA</span>
+            </div>
+            <ol className="space-y-1">
+              {[
+                'Tap the lock icon in the address bar',
+                'Find "Camera" permission',
+                'Change to "Allow"',
+                'Reload this page',
+              ].map((s, i) => (
+                <li key={i} className="flex gap-2 text-[10px] text-zinc-500">
+                  <span className="text-[#A78BFA] shrink-0 w-3 text-right">{i + 1}.</span>
+                  <span>{s}</span>
+                </li>
+              ))}
             </ol>
           </div>
         )}
-        
-        <div className="flex flex-col gap-2">
+
+        <div className="flex flex-col gap-2 w-full">
           <button
             onClick={onRetry}
-            className="px-6 py-3 rounded-full bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-medium hover:opacity-90 transition-all shadow-[0_0_20px_rgba(167,139,250,0.3)]"
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(167,139,250,0.2)]"
           >
             Try Again
           </button>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2.5 rounded-full bg-[#374151] text-[#D1D5DB] text-xs font-medium hover:bg-[#4B5563] transition-all"
+            className="w-full py-2.5 rounded-xl bg-zinc-800 text-zinc-400 text-sm font-medium hover:bg-zinc-700 transition-colors"
           >
             Reload Page
           </button>

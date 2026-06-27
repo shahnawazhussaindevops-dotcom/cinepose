@@ -11,10 +11,28 @@ interface PermissionsGateProps {
 
 type GateStep = 'welcome' | 'checking-permission' | 'starting' | 'gender' | 'error' | 'unsupported';
 
+function GateIcon({ children, variant = 'default' }: { children: React.ReactNode; variant?: 'default' | 'error' }) {
+  const bg = variant === 'error'
+    ? 'bg-gradient-to-br from-[#EF4444]/20 to-[#EF4444]/5 border-red-500/20'
+    : 'bg-gradient-to-br from-[#A78BFA]/20 via-[#6EE7B7]/10 to-[#22D3EE]/20 border-white/10';
+  return (
+    <div className={`w-20 h-20 rounded-[1.25rem] ${bg} flex items-center justify-center border mb-8`}>
+      {children}
+    </div>
+  );
+}
+
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl backdrop-blur-xl bg-black/40 border border-white/10 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 export function PermissionsGate({ onStartCamera, onComplete, contextError }: PermissionsGateProps) {
   const [step, setStep] = useState<GateStep>('welcome');
   const [errorMsg, setErrorMsg] = useState<string>('');
-  const [gender, setGender] = useState<'male' | 'female' | 'neutral' | null>(null);
   const [guidance, setGuidance] = useState<{ title: string; steps: string[]; icon: string } | null>(null);
 
   useEffect(() => {
@@ -43,18 +61,15 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
     }
 
     setStep('checking-permission');
-    
-    // On mobile, try to start camera directly without permission check first
-    // as permissions API is unreliable on some Android browsers
+
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    
+
     if (isMobile) {
       console.log('[PermissionsGate] Mobile detected, starting camera directly');
       setStep('starting');
       const success = await onStartCamera();
       if (success) {
         console.log('[PermissionsGate] Camera started successfully');
-        // Try to lock orientation
         if (typeof screen !== 'undefined' && 'orientation' in screen && typeof (screen.orientation as any).lock === 'function') {
           try { (screen.orientation as any).lock('portrait-primary').catch(() => {}); } catch {}
         }
@@ -72,8 +87,7 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
       }
       return;
     }
-    
-    // Desktop flow - check permissions first
+
     const permCheck = await checkCameraPermission();
 
     if (permCheck.state === 'denied') {
@@ -105,126 +119,146 @@ export function PermissionsGate({ onStartCamera, onComplete, contextError }: Per
 
   if (step === 'welcome') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center px-6">
-        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-[#A78BFA] to-[#6EE7B7] flex items-center justify-center mb-8 shadow-[0_0_60px_rgba(167,139,250,0.3)]">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5">
-            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
-            <circle cx="12" cy="13" r="4" />
-          </svg>
-        </div>
-        <h1 className="text-4xl font-bold text-[#F9FAFB] mb-3">CinePose</h1>
-        <p className="text-[#6B7280] text-center mb-2 max-w-xs leading-relaxed">AI-powered cinematic camera with 12 AI agents working in real-time.</p>
-        <p className="text-[#4B5563] text-xs text-center mb-10 max-w-xs">All processing happens on your device. Zero uploads.</p>
+      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center p-6">
+        <GlassCard className="w-full max-w-sm p-8 flex flex-col items-center text-center">
+          <GateIcon>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#cam-gradient)" strokeWidth="1.2">
+              <defs>
+                <linearGradient id="cam-gradient" x1="0" y1="0" x2="24" y2="24">
+                  <stop offset="0%" stopColor="#A78BFA" />
+                  <stop offset="100%" stopColor="#6EE7B7" />
+                </linearGradient>
+              </defs>
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </GateIcon>
 
-        <button
-          onClick={handleOpenCamera}
-          className="w-full max-w-sm px-8 py-4 rounded-full bg-[#A78BFA] text-white font-semibold text-lg hover:bg-[#9678E8] transition-all glow-violet active:scale-[0.98]"
-        >
-          Open Camera
-        </button>
-        <p className="text-[10px] text-[#4B5563] mt-4">Requires camera access. Your privacy is protected.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Cinepose</h1>
+          <p className="text-sm text-zinc-400 leading-relaxed mb-1">
+            AI-powered cinematic camera with 12 AI agents working in real-time.
+          </p>
+          <p className="text-xs text-zinc-500 mb-8">
+            All processing stays on your device. Zero uploads.
+          </p>
+
+          <button
+            onClick={handleOpenCamera}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-semibold hover:opacity-90 transition-opacity active:scale-[0.98] shadow-[0_0_24px_rgba(167,139,250,0.25)]"
+          >
+            Open Camera
+          </button>
+
+          <p className="text-[10px] text-zinc-500 mt-4 tracking-wide">
+            Camera access required to start
+          </p>
+        </GlassCard>
       </div>
     );
   }
 
-  if (step === 'checking-permission') {
+  if (step === 'checking-permission' || step === 'starting' || step === 'gender') {
+    const label = step === 'checking-permission'
+      ? 'Checking camera permissions'
+      : step === 'starting'
+      ? 'Starting camera'
+      : 'Ready';
     return (
-      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center px-6">
-        <div className="w-16 h-16 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mb-8" />
-        <p className="text-[#F9FAFB] font-medium">Checking camera permissions...</p>
-      </div>
-    );
-  }
-
-  if (step === 'starting') {
-    return (
-      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center px-6">
-        <div className="w-16 h-16 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mb-8" />
-        <p className="text-[#F9FAFB] font-medium">Starting camera...</p>
-        <p className="text-xs text-[#6B7280] mt-2">Please allow camera access when prompted</p>
-        <button
-          onClick={() => {
-            setStep('welcome');
-            setTimeout(() => handleOpenCamera(), 100);
-          }}
-          className="mt-8 px-6 py-2 rounded-full bg-white/5 text-white/60 text-xs font-medium hover:bg-white/10 transition-all"
-        >
-          Taking too long? Tap to retry
-        </button>
+      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center p-6">
+        <GlassCard className="w-full max-w-sm p-8 flex flex-col items-center text-center">
+          <div className="relative w-14 h-14 mb-6">
+            <div className="absolute inset-0 border-2 border-[#A78BFA]/30 border-t-[#A78BFA] rounded-full animate-spin" />
+            <div className="absolute inset-1 border-2 border-[#6EE7B7]/20 border-b-[#6EE7B7] rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+          </div>
+          <p className="text-sm font-medium text-white">{label}...</p>
+          {step === 'starting' && (
+            <>
+              <p className="text-xs text-zinc-500 mt-2">Please allow camera access when prompted</p>
+              <button
+                onClick={() => {
+                  setStep('welcome');
+                  setTimeout(() => handleOpenCamera(), 100);
+                }}
+                className="mt-6 px-5 py-2 rounded-lg bg-white/5 text-zinc-400 text-xs font-medium hover:bg-white/10 transition-colors"
+              >
+                Taking too long? Tap to retry
+              </button>
+            </>
+          )}
+        </GlassCard>
       </div>
     );
   }
 
   if (step === 'unsupported') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center px-6">
-        <div className="w-20 h-20 rounded-2xl bg-[#EF4444]/10 flex items-center justify-center mb-6">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-        <h2 className="text-xl font-bold text-[#F9FAFB] mb-2">Browser Not Supported</h2>
-        <p className="text-sm text-[#6B7280] text-center mb-8 max-w-sm">{errorMsg}</p>
-        <p className="text-xs text-[#4B5563] text-center">Please use a modern browser like Chrome, Safari, or Firefox with HTTPS.</p>
+      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center p-6">
+        <GlassCard className="w-full max-w-sm p-8 flex flex-col items-center text-center">
+          <GateIcon variant="error">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </GateIcon>
+          <h2 className="text-lg font-semibold text-white mb-2">Browser Not Supported</h2>
+          <p className="text-sm text-zinc-400 leading-relaxed mb-6">{errorMsg}</p>
+          <p className="text-xs text-zinc-500">Please use Chrome, Safari, or Firefox with HTTPS.</p>
+        </GlassCard>
       </div>
     );
   }
 
   if (step === 'error') {
     return (
-      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center px-6">
-        <div className="w-20 h-20 rounded-2xl bg-[#EF4444]/10 flex items-center justify-center mb-6">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="15" y1="9" x2="9" y2="15" />
-            <line x1="9" y1="9" x2="15" y2="15" />
-          </svg>
-        </div>
-        <h2 className="text-xl font-bold text-[#F9FAFB] mb-2">Camera Access Required</h2>
-        <p className="text-sm text-[#6B7280] text-center mb-4 max-w-sm">{errorMsg}</p>
+      <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center p-6">
+        <GlassCard className="w-full max-w-sm p-8 flex flex-col items-center text-center">
+          <GateIcon variant="error">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          </GateIcon>
+          <h2 className="text-lg font-semibold text-white mb-2">Camera Access Required</h2>
+          <p className="text-sm text-zinc-400 leading-relaxed mb-6">{errorMsg}</p>
 
-        {guidance && (
-          <div className="bg-white/5 rounded-xl p-4 mb-6 max-w-sm w-full">
-            <h3 className="text-sm font-medium text-[#F9FAFB] mb-2">{guidance.icon} {guidance.title}</h3>
-            <ol className="text-xs text-[#6B7280] space-y-1">
-              {guidance.steps.map((step, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="text-[#A78BFA] shrink-0">{i + 1}.</span>
-                  <span>{step}</span>
-                </li>
-              ))}
-            </ol>
+          {guidance && (
+            <div className="w-full rounded-xl bg-white/5 p-4 mb-6 text-left">
+              <h3 className="text-xs font-semibold text-zinc-300 mb-2 tracking-wide">{guidance.icon} {guidance.title}</h3>
+              <ol className="space-y-1">
+                {guidance.steps.map((s, i) => (
+                  <li key={i} className="flex gap-2 text-xs text-zinc-500">
+                    <span className="text-[#A78BFA] shrink-0 w-3.5 text-right">{i + 1}.</span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          <div className="w-full space-y-2">
+            <button
+              onClick={handleOpenCamera}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#A78BFA] to-[#7C3AED] text-white text-sm font-semibold hover:opacity-90 transition-opacity shadow-[0_0_20px_rgba(167,139,250,0.2)]"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-2.5 rounded-xl bg-white/5 text-zinc-400 text-sm font-medium hover:bg-white/10 transition-colors"
+            >
+              Reload Page
+            </button>
           </div>
-        )}
 
-        <div className="w-full max-w-sm space-y-2">
-          <button
-            onClick={handleOpenCamera}
-            className="w-full px-8 py-3.5 rounded-full bg-[#A78BFA] text-white font-semibold hover:bg-[#9678E8] transition-all glow-violet"
-          >
-            Try Again
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full px-8 py-2.5 rounded-full bg-white/5 text-white/60 text-sm font-medium hover:bg-white/10 transition-all"
-          >
-            Reload Page
-          </button>
-        </div>
-        
-        <p className="text-[9px] text-[#4B5563] mt-4 text-center max-w-xs">
-          Still not working? Try: Settings → Apps → Chrome → Permissions → Camera → Allow
-        </p>
+          <p className="text-[10px] text-zinc-500 mt-4 max-w-xs leading-relaxed">
+            Still not working? Try: Settings → Apps → Chrome → Permissions → Camera → Allow
+          </p>
+        </GlassCard>
       </div>
     );
   }
 
-  return (
-    <div className="fixed inset-0 z-50 bg-[#0D0D1A] flex flex-col items-center justify-center px-6">
-      <div className="w-16 h-16 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin mb-8" />
-      <p className="text-[#F9FAFB] font-medium">Ready!</p>
-    </div>
-  );
+  return null;
 }

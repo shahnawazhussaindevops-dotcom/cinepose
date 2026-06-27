@@ -1,4 +1,5 @@
 import type { CameraDiagnostics, CameraErrorInfo, CameraConfig, CameraFacingMode, CameraDeviceInfo, CameraStatus } from './types';
+export type { CameraDiagnostics };
 import type { CameraEventCallback } from './types';
 import { log, isSecureContext, getPlatformInfo } from './mediaUtils';
 import { checkCameraPermission } from './permissions';
@@ -17,7 +18,7 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 export class CameraManager {
   private stream: MediaStream | null = null;
   private videoElement: HTMLVideoElement | null = null;
-  private onDiagnosticsChange: CameraEventCallback | null = null;
+  private diagnosticsCallbacks: CameraEventCallback[] = [];
   private isPausedByBackground = false;
   private currentConfig: CameraConfig | null = null;
   private currentDevice: CameraDeviceInfo | null = null;
@@ -64,8 +65,14 @@ export class CameraManager {
   }
 
   public setDiagnosticsCallback(callback: CameraEventCallback) {
-    this.onDiagnosticsChange = callback;
-    this.emitDiagnostics();
+    if (!this.diagnosticsCallbacks.includes(callback)) {
+      this.diagnosticsCallbacks.push(callback);
+    }
+    callback(this.diagnostics);
+  }
+
+  public removeDiagnosticsCallback(callback: CameraEventCallback) {
+    this.diagnosticsCallbacks = this.diagnosticsCallbacks.filter(c => c !== callback);
   }
 
   private updateDiagnostics(updates: Partial<CameraDiagnostics>) {
@@ -74,8 +81,8 @@ export class CameraManager {
   }
 
   private emitDiagnostics() {
-    if (this.onDiagnosticsChange) {
-      this.onDiagnosticsChange(this.diagnostics);
+    for (const cb of this.diagnosticsCallbacks) {
+      cb(this.diagnostics);
     }
   }
 
@@ -150,8 +157,12 @@ export class CameraManager {
       permissionState: this.diagnostics.permissionState,
     });
 
-    const permCheck = await checkCameraPermission();
-    this.updateDiagnostics({ permissionState: permCheck.state });
+    // On mobile, skip permissions.query() — it's unreliable on Android Chrome
+    // and can cause false NotFoundError by blocking getUserMedia.
+    if (!getPlatformInfo().isMobile) {
+      const permCheck = await checkCameraPermission();
+      this.updateDiagnostics({ permissionState: permCheck.state });
+    }
 
     const result = await createCameraStreamWithDeviceDiscovery(finalConfig);
 

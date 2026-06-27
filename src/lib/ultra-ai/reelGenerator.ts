@@ -55,6 +55,7 @@ export class AIReelGeneratorEngine {
       soft: ['Folk acoustic', 'Soft vocal', 'Ambient guitar'],
       dramatic: ['Cinematic strings', 'Epic choir', 'Intense percussion'],
       nostalgic: ['Lo-fi beats', 'Vintage synth', 'Acoustic covers'],
+      natural: ['Indie acoustic', 'Ambient folk', 'Soft percussion'],
     };
     return map[mood] || ['Ambient electronic', 'Lo-fi beats'];
   }

@@ -16,7 +16,7 @@ export interface TrackInfo {
   frameRate: number | null;
 }
 
-export function getTrackInfo(track: MediaStreamVideoTrack): TrackInfo {
+export function getTrackInfo(track: MediaStreamTrack): TrackInfo {
   const settings = track.getSettings();
   return {
     label: track.label || 'Unknown Camera',
@@ -59,10 +59,16 @@ export async function createCameraStream(config: CameraConfig): Promise<StreamRe
     };
   }
 
-  const permCheck = await checkCameraPermission();
-  if (permCheck.error) {
-    if (permCheck.state === 'denied') {
-      return { stream: null, device: null, error: permCheck.error };
+  const platform = getPlatformInfo();
+
+  // On mobile, skip permissions.query() — it's unreliable on Android Chrome
+  // and can return false denials. PermissionsGate already handles the mobile flow.
+  if (!platform.isMobile) {
+    const permCheck = await checkCameraPermission();
+    if (permCheck.error) {
+      if (permCheck.state === 'denied') {
+        return { stream: null, device: null, error: permCheck.error };
+      }
     }
   }
 
@@ -121,58 +127,47 @@ function normalizeResolution(resolution?: { width: number; height: number }): { 
 
 function buildFallbackConstraints(config: CameraConfig): MediaStreamConstraints[] {
   const platform = getPlatformInfo();
-  const baseVideo: MediaTrackConstraints = {
-    facingMode: config.preferredFacingMode === 'unknown' ? 'environment' : config.preferredFacingMode,
-  };
+  const preferred = config.preferredFacingMode === 'unknown' ? 'environment' : config.preferredFacingMode;
+  const opposite = preferred === 'environment' ? 'user' : 'environment';
 
   // Don't use exact deviceId on mobile as it can fail
+  const baseVideo: MediaTrackConstraints = { facingMode: preferred };
   if (config.preferredDeviceId && !platform.isMobile) {
     baseVideo.deviceId = { exact: config.preferredDeviceId };
   }
 
   const constraints: MediaStreamConstraints[] = [];
 
-  // First try: Simple facingMode only (most compatible on mobile)
+  // 1: Simple facingMode only (works on most modern devices)
+  constraints.push({ video: { facingMode: preferred }, audio: false });
+
+  // 2: No facingMode, just standard resolution (works on older Android where
+  //    facingMode constraint is not well supported, e.g. Android 7-10 Chrome)
+  constraints.push({ video: { width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+
+  // 3: Most permissive — no constraints at all
+  constraints.push({ video: true, audio: false });
+
+  // 4: With ideal resolution + facingMode
   constraints.push({
-    video: {
-      facingMode: config.preferredFacingMode === 'unknown' ? 'environment' : config.preferredFacingMode,
-    },
+    video: { ...baseVideo, width: { ideal: 1280 }, height: { ideal: 720 } },
     audio: false,
   });
 
-  // Second try: With ideal resolution
+  // 5: Lower resolution + facingMode
   constraints.push({
-    video: {
-      ...baseVideo,
-      width: { ideal: platform.isMobile ? 1280 : 1920 },
-      height: { ideal: platform.isMobile ? 720 : 1080 },
-    },
+    video: { ...baseVideo, width: { ideal: 640 }, height: { ideal: 480 } },
     audio: false,
   });
 
-  // Third try: Lower resolution
+  // 6: Portrait-friendly resolution (many phone cameras prefer portrait)
   constraints.push({
-    video: {
-      ...baseVideo,
-      width: { ideal: 640 },
-      height: { ideal: 480 },
-    },
+    video: { width: { ideal: 720 }, height: { ideal: 1280 } },
     audio: false,
   });
 
-  // Fourth try: Just video true (most permissive)
-  constraints.push({
-    video: true,
-    audio: false,
-  });
-
-  // Fifth try: Opposite facing mode with simple constraints
-  constraints.push({
-    video: {
-      facingMode: config.preferredFacingMode === 'environment' ? 'user' : 'environment',
-    },
-    audio: false,
-  });
+  // 7: Opposite facingMode, simple
+  constraints.push({ video: { facingMode: opposite }, audio: false });
 
   return constraints;
 }

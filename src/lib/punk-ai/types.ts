@@ -1,6 +1,6 @@
 export type Gender = 'male' | 'female' | 'neutral';
-export type SceneType = 'urban' | 'nature' | 'indoor' | 'beach' | 'mountain' | 'street' | 'architecture';
-export type CameraAngle = 'eye_level' | 'low_angle' | 'high_angle' | 'bird_eye' | 'overhead';
+export type SceneType = 'urban' | 'nature' | 'indoor' | 'beach' | 'mountain' | 'street' | 'architecture' | 'office' | 'cafe' | 'sunset' | 'park';
+export type CameraAngle = 'eye_level' | 'low_angle' | 'high_angle' | 'bird_eye' | 'overhead' | 'dutch_angle';
 
 export interface JointPosition {
   name: string;
@@ -33,7 +33,10 @@ export type StyleTab =
   | 'Minimal' | 'Cute' | 'Adventure' | 'Creative' | 'Drone'
   | 'Couple' | 'Wedding' | 'InstagramTrend' | 'PinterestTrend'
   | 'Viral' | 'Vintage' | 'Retro' | 'Moody' | 'Dark'
-  | 'Bright' | 'Professional' | 'Business' | 'Fitness';
+  | 'Bright' | 'Professional' | 'Business' | 'Fitness'
+  | 'Lifestyle' | 'Corporate' | 'LinkedIn' | 'Cozy' | 'Dynamic'
+  | 'Active' | 'Daring' | 'Urban' | 'Romantic' | 'Sunset'
+  | 'Celebration' | 'Dramatic' | 'AvantGarde' | 'cinematic_hero';
 
 export interface SceneContext {
   locationType: string;

@@ -6,6 +6,7 @@ const defaultProControls: ProColorControls = {
   exposure: 0,
   highlights: 0,
   shadows: 0,
+  contrast: 1,
   temperature: 5500,
   tint: 0,
   vibrance: 0,

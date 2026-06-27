@@ -9,14 +9,6 @@ export function AIHumanClonePanel() {
   const [poseIndex, setPoseIndex] = React.useState(0);
   const currentPose = POSES[poseIndex % POSES.length];
 
-  const cameraAngles = [
-    { label: 'Eye Level', val: [0, 0.3, 1.2] },
-    { label: 'Low Angle', val: [0, 0.1, 0.5] },
-    { label: 'High Angle', val: [0, 0.8, 1.5] },
-    { label: 'Profile', val: [0.8, 0.3, 0.8] },
-    { label: '¾', val: [0.5, 0.3, 1.0] },
-  ];
-
   return (
     <div className="absolute inset-0 z-20 pointer-events-none">
       <div className="absolute top-16 left-4 right-[30%] pointer-events-auto">

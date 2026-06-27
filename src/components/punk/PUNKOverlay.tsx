@@ -59,7 +59,7 @@ export function PUNKOverlay({ active, onClose }: PUNKOverlayProps) {
       return sceneEngine.analyzeScene(
         currentLighting.averageLuminance || 0,
         currentLighting.colorTemperature || 5500,
-        0, 0, false, false,
+        0, false, false, false,
         currentLighting.shadowClip || 0,
         currentLighting.highlightClip || 0,
       );

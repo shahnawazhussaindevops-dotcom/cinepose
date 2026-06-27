@@ -11,9 +11,11 @@
     "preview": "astro preview",
     "astro": "astro",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "astro check"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.9",
     "@astrojs/react": "^5.0.7",
     "@astrojs/vercel": "^10.0.8",
     "@google/generative-ai": "^0.24.1",
@@ -30,6 +32,7 @@
     "react-dom": "^19.2.7",
     "tailwindcss": "^4.3.0",
     "three": "^0.184.0",
+    "typescript": "^6.0.3",
     "zustand": "^5.0.14"
   },
   "devDependencies": {

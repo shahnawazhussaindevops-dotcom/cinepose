@@ -4,7 +4,7 @@ import { cineGPT } from '../../lib/ultra-ai/cineGPT';
 import { useUltraStore } from '../../stores/ultraStore';
 
 export function CineGPTPanel() {
-  const { cineGPTResponse, setCineGPTResponse, chatHistory, addChatMessage, setActiveMode, lastLocationType, lastMoodType } = useUltraStore();
+  const { chatHistory, addChatMessage, setActiveMode, setCineGPTResponse, lastLocationType, lastMoodType } = useUltraStore();
   const [input, setInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(true);
 

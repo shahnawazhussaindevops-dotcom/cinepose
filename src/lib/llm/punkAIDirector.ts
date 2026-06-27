@@ -91,7 +91,7 @@ export class PunkAIDirector {
       const raw = sceneEngine.analyzeScene(
         sceneInput.luminance,
         sceneInput.temperature,
-        0, 0, false, false, 0, 0,
+        0, false, false, false, 0, 0,
       );
       result.sceneContext = raw;
 

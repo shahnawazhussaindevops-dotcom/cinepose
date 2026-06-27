@@ -21,7 +21,8 @@ import { useAppStore } from '../../stores/appStore';
 import { getRecommendedPoses } from '../pose/PoseLibrary';
 
 export function CameraApp() {
-  const { videoRef, loading, takePhoto, captureFrame, toggleCamera, setZoom, zoom } = useCamera();
+  const { videoRef, loading, takePhoto, captureFrame } = useCamera();
+  const { facingFront, toggleCamera, zoom, setZoom } = useCameraStore();
   const { lighting, startAnalysis } = useLighting();
   const { detectCameraAngle } = useGyroscope();
   const { photosTaken, setCurrentLighting } = useCameraStore();
@@ -54,11 +55,12 @@ export function CameraApp() {
   }, [lighting, selectedGender, detectCameraAngle, setRecommendedPoses]);
 
   const handleCapture = useCallback(() => {
-    const photo = takePhoto();
-    if (photo) {
-      setToast({ message: 'Photo captured!', type: 'success' });
-      setTimeout(() => setToast(null), 2500);
-    }
+    takePhoto().then(photo => {
+      if (photo) {
+        setToast({ message: 'Photo captured!', type: 'success' });
+        setTimeout(() => setToast(null), 2500);
+      }
+    });
   }, [takePhoto]);
 
   const handleTogglePose = useCallback(() => {
